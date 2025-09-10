@@ -1,5 +1,6 @@
 'use client';
 import { motion } from 'framer-motion';
+import Link from "next/link"; // add this
 
 export default function Home() {
     return (
@@ -13,8 +14,8 @@ export default function Home() {
                         Mechatronics @ TUHH & founder of UNARCHI. Robotics, large-scale 3D printing, control systems, prototypes.
                     </p>
                     <div className="mt-8 flex gap-3">
-                        <a href="/projects" className="rounded-2xl px-5 py-3 bg-white text-black hover:opacity-90">View projects</a>
-                        <a href="/contact" className="rounded-2xl px-5 py-3 border border-white/20 hover:border-white/40">Contact</a>
+                        <Link href="/projects" className="rounded-2xl px-5 py-3 bg-white text-black hover:opacity-90">View projects</Link>
+                        <Link href="/contact" className="rounded-2xl px-5 py-3 border border-white/20 hover:border-white/40">Contact</Link>
                     </div>
                 </motion.div>
 
