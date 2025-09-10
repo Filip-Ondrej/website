@@ -1,7 +1,9 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  /* config options here */
+    // Make a static export to /out when running `next build`
+    output: 'export',
+    images: { unoptimized: true }, // allows next/image without an image server
 };
 
 export default nextConfig;
