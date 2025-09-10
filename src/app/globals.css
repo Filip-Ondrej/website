@@ -26,3 +26,15 @@ body {
     color: var(--foreground);
     font-family: Arial, Helvetica, sans-serif;
 }
+/* subtle white outline for Bank Gothic headings */
+.text-outline {
+    text-shadow:
+            0 0 2px rgba(255,255,255,0.25),
+            0 0 24px rgba(255,255,255,0.06);
+}
+
+/* marquee animation (used for receipts strip) */
+@keyframes marquee {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+}

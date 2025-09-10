@@ -1,143 +1,86 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
+import MagneticButton from '@/components/MagneticButton';
+import TiltCard from '@/components/TiltCard';
+import CursorGlow from '@/components/CursorGlow';
 
-/** --------- tiny particle background (GPU-cheap) ---------- */
-function ParticleField() {
-    const ref = useRef<HTMLCanvasElement>(null);
-
-    useEffect(() => {
-        const c = ref.current!;
-        const ctx = c.getContext('2d')!;
-        let w = 0, h = 0, raf = 0;
-
-        const dots = Array.from({ length: 70 }, () => ({
-            x: Math.random(),
-            y: Math.random(),
-            vx: (Math.random() * 0.25 + 0.05) * (Math.random() > 0.5 ? 1 : -1),
-            vy: (Math.random() * 0.25 + 0.05) * (Math.random() > 0.5 ? 1 : -1),
-        }));
-
-        const resize = () => {
-            w = c.width = c.offsetWidth * devicePixelRatio;
-            h = c.height = c.offsetHeight * devicePixelRatio;
-            ctx.scale(devicePixelRatio, devicePixelRatio);
-        };
-
-        const tick = () => {
-            ctx.clearRect(0, 0, w, h);
-            ctx.fillStyle = 'rgba(255,255,255,0.6)';
-            const cw = w / devicePixelRatio;
-            const ch = h / devicePixelRatio;
-
-            dots.forEach(d => {
-                d.x += d.vx * 0.0015;
-                d.y += d.vy * 0.0015;
-                if (d.x < 0) d.x = 1;
-                if (d.x > 1) d.x = 0;
-                if (d.y < 0) d.y = 1;
-                if (d.y > 1) d.y = 0;
-
-                const px = d.x * cw;
-                const py = d.y * ch;
-                ctx.beginPath();
-                ctx.arc(px, py, 1.3, 0, Math.PI * 2);
-                ctx.fill();
-            });
-
-            raf = requestAnimationFrame(tick);
-        };
-
-        resize();
-        tick();
-        const ro = new ResizeObserver(resize);
-        ro.observe(c);
-        return () => {
-            cancelAnimationFrame(raf);
-            ro.disconnect();
-        };
-    }, []);
-
-    return <canvas ref={ref} className="absolute inset-0 w-full h-full opacity-25" aria-hidden />;
-}
-
-/** -------------------------- HERO -------------------------- */
-function Hero({ onOpenReel }: { onOpenReel: () => void }) {
+function GradientField() {
+    // animated conic + radial mask – cheap and striking
     return (
-        <section className="relative overflow-hidden rounded-2xl ring-1 ring-white/10 mt-8">
-            <ParticleField />
-            <div className="relative px-6 py-20 md:py-28">
-                <motion.h1
-                    initial={{ clipPath: 'inset(0 100% 0 0)' }}
-                    animate={{ clipPath: 'inset(0 0% 0 0)' }}
-                    transition={{ duration: 0.6, ease: 'easeOut' }}
-                    className="font-bank text-5xl sm:text-7xl tracking-tight"
-                >
-                    Building autonomous 3D-printing systems.
-                </motion.h1>
-
-                <motion.p
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4, delay: 0.1 }}
-                    className="mt-4 max-w-2xl text-zinc-300"
-                >
-                    Robotics • Control • Real-time calibration • Large-scale additive manufacturing.
-                </motion.p>
-
-                <div className="mt-8 flex gap-3">
-                    <Link
-                        href="/projects"
-                        className="rounded-2xl px-5 py-3 bg-white text-black hover:opacity-90 transition"
-                    >
-                        View projects
-                    </Link>
-
-                    <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.96 }}
-                        transition={{ type: 'spring', stiffness: 360, damping: 22 }}
-                        onClick={onOpenReel}
-                        className="rounded-2xl px-5 py-3 border border-white/20 hover:border-white/40"
-                    >
-                        Watch 45-sec reel
-                    </motion.button>
-                </div>
-            </div>
-        </section>
+        <div
+            aria-hidden
+            className="absolute inset-0 -z-10 [mask-image:radial-gradient(70%_70%_at_50%_40%,black,transparent)]
+                 bg-[conic-gradient(from_0deg,rgba(255,106,0,.12),rgba(0,224,255,.12),rgba(255,106,0,.12))] animate-[spin_16s_linear_infinite]"
+        />
     );
 }
 
-/** --------------------- CREDIBILITY STRIP ------------------ */
-function CredStrip() {
-    const items = [
-        { k: 'World Champion', v: 'RoboCup Rescue Simulation' },
-        { k: 'Best Hardware', v: 'RoboCup Rescue Line (EU & World)' },
-        { k: 'St. Gorazd Award', v: 'Highest moral award (SVK)' },
-        { k: 'Young Creator', v: 'Ministry of Education' },
-    ];
-    return (
-        <section className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {items.map(i => (
-                <div key={i.k} className="rounded-2xl border border-white/10 px-5 py-4">
-                    <div className="text-sm opacity-70">{i.k}</div>
-                    <div className="font-semibold">{i.v}</div>
-                </div>
-            ))}
-        </section>
-    );
-}
-
-/** --------------------------- PAGE ------------------------- */
 export default function Home() {
     const [open, setOpen] = useState(false);
 
     return (
         <>
-            <Hero onOpenReel={() => setOpen(true)} />
-            <CredStrip />
+            <CursorGlow />
+            <section className="relative overflow-hidden rounded-2xl ring-1 ring-white/10 mt-8">
+                <GradientField />
+
+                <div className="relative px-6 py-20 md:py-28">
+                    <motion.h1
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5 }}
+                        className="font-bank text-5xl sm:text-7xl tracking-[0.02em] text-white text-outline"
+                    >
+                        I build autonomous<br/>3D-printing systems.
+                    </motion.h1>
+
+                    <motion.p
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.4, delay: 0.1 }}
+                        className="mt-4 max-w-2xl text-zinc-300"
+                    >
+                        Robotics • Control • Real-time calibration • Large-scale additive manufacturing.
+                    </motion.p>
+
+                    <div className="mt-8 flex gap-3">
+                        <Link href="/projects" className="rounded-2xl px-6 py-3 bg-white text-black hover:opacity-90 transition">
+                            View projects
+                        </Link>
+                        <MagneticButton
+                            onClick={() => setOpen(true)}
+                            className="border border-white/20 hover:border-white/40 bg-white/5 text-white"
+                        >
+                            Watch 45-sec reel
+                        </MagneticButton>
+                    </div>
+
+                    {/* marquee receipts */}
+                    <div className="mt-10 overflow-hidden">
+                        <div className="flex gap-8 animate-[marquee_18s_linear_infinite] whitespace-nowrap opacity-80 text-sm">
+                            <span>World Champion — RoboCup Rescue Simulation</span>
+                            <span>Best Hardware — RoboCup Rescue Line (EU & World)</span>
+                            <span>St. Gorazd Award — Highest moral award (SVK)</span>
+                            <span>Young Creator — Ministry of Education</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* Tilted project teaser */}
+            <section className="py-14">
+                <div className="flex items-end justify-between">
+                    <h2 className="font-bank text-3xl">Projects</h2>
+                    <Link href="/projects" className="underline opacity-80 hover:opacity-100">All projects →</Link>
+                </div>
+                <div className="mt-6 grid gap-6 sm:grid-cols-2">
+                    <TiltCard title="Autonomous 2×2 m Printer Module" subtitle="Real-time calibration, multi-nozzle head" />
+                    <TiltCard title="Hush Guard — Noise Monitoring" subtitle="IoT beacons + dashboard; hardware + SaaS" />
+                </div>
+            </section>
 
             {/* Reel modal */}
             <AnimatePresence>
@@ -169,3 +112,5 @@ export default function Home() {
         </>
     );
 }
+
+/* Tailwind keyframes (v4 supports @keyframes in globals; see step 3) */

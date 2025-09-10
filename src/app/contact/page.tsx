@@ -10,7 +10,7 @@ export default function Contact() {
                 <button className="rounded-2xl px-5 py-3 bg-white text-black hover:opacity-90">Send</button>
             </form>
             <p className="mt-6 opacity-70 text-sm">
-                Or email <a className="underline" href="mailto:hi@filipondrej.com">hi@filipondrej.com</a>
+                Or email <a className="underline" href="mailto:ondrejfilip152@gmail.com">ondrejfilip152@gmail.com</a>
             </p>
         </section>
     );
