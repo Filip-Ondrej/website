@@ -39,20 +39,84 @@ body {
     to   { transform: translateX(-50%); }
 }
 
-/* --- Collaborations tape animation (respects reduced motion) --- */
+
+/* ---------- Full-bleed tapes ---------- */
+.tape { overflow: hidden; }
+.tape-run {
+    display: inline-flex;
+    gap: 0;
+    white-space: nowrap;
+    will-change: transform;
+    animation: tapeScroll 60s linear infinite;      /* slower */
+    padding-block: 10px;
+    color: rgba(255,255,255,.85);
+}
+.tape-run--reverse { animation-direction: reverse; }
+
 @keyframes tapeScroll {
     from { transform: translateX(0); }
     to   { transform: translateX(-50%); }
 }
-.tape-run {
-    display: inline-flex;
-    align-items: center;
-    gap: 0;             /* text blocks already include spacing */
-    padding-block: 8px; /* band thickness */
-    color: rgba(255,255,255,0.85);
-    font-family: var(--font-sans);
-    animation: tapeScroll 28s linear infinite;
+
+/* ---------- Brands row (center) ---------- */
+.brands { position: relative; }
+.brands-track {
+    display: flex;
+    width: max-content;
+    will-change: transform;
+    animation: brandsScroll 80s linear infinite;     /* slower loop */
 }
+@keyframes brandsScroll {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+}
+
+/* Pause animations on row hover (each row independent) */
+.tape:hover .tape-run,
+.brands:hover .brands-track { animation-play-state: paused; }
+
+/* Brand hover treatment (card, corner, caption) */
+.brand {
+    position: relative;
+    transition: color .2s ease;
+}
+.brand:hover { color: rgba(255,255,255,1); }
+
+.brand-name { position: relative; z-index: 2; }
+
+/* hidden chrome by default */
+.brand-card {
+    position: absolute;
+    inset: -14px -20px -28px -20px; /* extend below for caption line */
+    border-left: 1px solid rgba(255,255,255,.08);
+    border-right: 1px solid rgba(255,255,255,.08);
+    background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0) 55%);
+    opacity: 0;
+    transform: translateZ(0);
+    transition: opacity .2s ease, border-color .2s ease;
+}
+.brand:hover .brand-card {
+    opacity: 1;
+    border-color: rgba(255,255,255,.22);
+}
+
+.brand-corner {
+    position: absolute;
+    top: 8px; right: 10px;
+    font-size: 12px;
+    opacity: .9;
+}
+
+.brand-caption {
+    position: absolute;
+    left: 0; right: 0; bottom: -18px;
+    text-align: center;
+    font-size: 12px;
+    letter-spacing: .06em;
+    color: rgba(255,255,255,.85);
+}
+
+/* Respect reduced motion */
 @media (prefers-reduced-motion: reduce) {
-    .tape-run { animation: none; }
+    .tape-run, .brands-track { animation: none; }
 }

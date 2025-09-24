@@ -1,15 +1,16 @@
 export type Collaborator = {
     name: string;
-    href?: string; // optional - link to case study/website
+    href?: string;
+    caption?: string; // shown on hover
 };
 
 export const collaborators: Collaborator[] = [
-    { name: 'Novacene', href: '#' },
-    { name: 'Shop Circle', href: '#' },
-    { name: 'Lendhub', href: '#' },
-    { name: 'Flooz', href: '#' },
-    { name: 'mindsum', href: '#' },
-    { name: 'upkeep', href: '#' },
-    { name: 'Plus X Innovation', href: '#' },
-    // add/remove freely
+    { name: 'Novacene', href: '#', caption: 'BRAND DESIGN | DEV' },
+    { name: 'Shop Circle', href: '#', caption: 'PRODUCT | BRAND' },
+    { name: 'Lendhub', href: '#', caption: 'PLATFORM | DESIGN' },
+    { name: 'Flooz', href: '#', caption: 'BRAND | MOTION' },
+    { name: 'mindsum', href: '#', caption: 'BRAND DESIGN | DEV' },
+    { name: 'upkeep', href: '#', caption: 'APP | BRAND' },
+    { name: 'Plus X Innovation', href: '#', caption: 'PROGRAM | BRAND' },
+    { name: 'Slip', href: '#', caption: 'IDENTITY | WEB' },
 ];

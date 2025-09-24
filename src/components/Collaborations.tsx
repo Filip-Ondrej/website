@@ -4,99 +4,95 @@ import Link from 'next/link';
 import { collaborators } from '@/data/collaborators';
 
 /**
- * A tasteful “tape” band:
- * - Top & bottom animated border tapes with repeating text & marks
- * - Center area shows collaborator names (or swap to logos later)
- * - Prefers-reduced-motion handled
+ * Full-bleed collaborations band:
+ *  ─ Top tape (marquee left)
+ *  ─ Brands row (marquee left, pauses on hover, items highlight)
+ *  ─ Bottom tape (marquee right)
  */
 export default function Collaborations() {
     return (
         <section aria-labelledby="collab-title" className="mt-16">
-            {/* TOP TAPE */}
-            <Tape
-                label="COLLABORATIONS & BRAND EXPERIENCE"
-                variant="top"
-            />
+            <Tape label="COLLABORATIONS & BRAND EXPERIENCE" reverse={false} />
 
-            {/* CONTENT */}
-            <div className="bg-[#0C0C0F]">
-                <div className="container py-14">
-                    <h2 id="collab-title" className="sr-only">
-                        Collaborations & Brand Experience
-                    </h2>
-                    <ul className="grid gap-y-8 gap-x-6 sm:grid-cols-2 lg:grid-cols-3">
-                        {collaborators.map((c) => (
-                            <li key={c.name} className="min-h-[64px] flex items-center">
-                                {c.href ? (
-                                    <Link
-                                        href={c.href}
-                                        className="text-[clamp(20px,2.4vw,28px)] font-semibold tracking-wide hover:opacity-90 focus:outline-none focus-visible:ring-2 rounded"
-                                    >
-                                        {c.name}
-                                    </Link>
-                                ) : (
-                                    <span className="text-[clamp(20px,2.4vw,28px)] font-semibold tracking-wide">
-                    {c.name}
-                  </span>
-                                )}
-                            </li>
-                        ))}
-                    </ul>
+            {/* Brands row (full bleed) */}
+            <div className="relative bg-[#0C0C0F] border-y border-white/10">
+                <h2 id="collab-title" className="sr-only">Collaborations & Brand Experience</h2>
+
+                <div className="brands overflow-hidden select-none" aria-hidden={false}>
+                    {/* track: duplicated content for seamless loop */}
+                    <div className="brands-track">
+                        <Row />
+                        <Row />
+                    </div>
                 </div>
             </div>
 
-            {/* BOTTOM TAPE */}
-            <Tape
-                label="COLLABORATIONS & BRAND EXPERIENCE"
-                variant="bottom"
-            />
+            <Tape label="COLLABORATIONS & BRAND EXPERIENCE" reverse />
         </section>
     );
 }
 
-/** Decorative moving tape with repeating label + marks + binary clusters */
-function Tape({ label, variant }: { label: string; variant: 'top' | 'bottom' }) {
-    const content = Array.from({ length: 8 }).map((_, i) => (
-        <div key={i} className="flex items-center gap-4 px-6">
-      <span className="tracking-[0.18em] text-xs sm:text-[13px]">
-        {label}
-      </span>
+function Row() {
+    return (
+        <ul className="flex items-stretch gap-0">
+            {collaborators.map((c) => (
+                <li key={c.name} className="shrink-0">
+                    {c.href ? (
+                        <Link
+                            href={c.href}
+                            className="brand block px-[8vw] sm:px-[10vw] py-16 md:py-20 text-[clamp(20px,2.6vw,34px)] font-semibold tracking-wide text-white/80"
+                        >
+              <span className="relative inline-block">
+                {/* label */}
+                  <span className="brand-name">{c.name}</span>
+
+                  {/* hover chrome */}
+                  <span className="brand-card" aria-hidden>
+                  <span className="brand-corner">↗</span>
+                  <span className="brand-caption">[{c.caption ?? 'BRAND'}]</span>
+                </span>
+              </span>
+                        </Link>
+                    ) : (
+                        <span className="brand block px-[8vw] sm:px-[10vw] py-16 md:py-20 text-[clamp(20px,2.6vw,34px)] font-semibold tracking-wide text-white/80">
+              <span className="relative inline-block">
+                <span className="brand-name">{c.name}</span>
+                <span className="brand-card" aria-hidden>
+                  <span className="brand-corner">↗</span>
+                  <span className="brand-caption">[{c.caption ?? 'BRAND'}]</span>
+                </span>
+              </span>
+            </span>
+                    )}
+                </li>
+            ))}
+        </ul>
+    );
+}
+
+/** Top/bottom moving tapes */
+function Tape({ label, reverse = false }: { label: string; reverse?: boolean }) {
+    const block = (
+        <div className="flex items-center gap-4 px-6">
+            <span className="tracking-[0.18em] text-[11px] sm:text-[12px]">{label}</span>
             <span aria-hidden className="opacity-60">/ / / / / / / / / / / / / /</span>
-            <span aria-hidden className="opacity-60">{binaryChunk(i)}</span>
+            <span aria-hidden className="opacity-60">{binaryChunk()}</span>
             <span aria-hidden className="opacity-60">/ / / / / / / / /</span>
         </div>
-    ));
+    );
 
     return (
-        <div
-            className={[
-                'relative isolate border-y border-white/10 bg-[#0C0C0F]',
-                variant === 'top' ? '' : '',
-            ].join(' ')}
-        >
-            {/* gradient edge */}
-            <div
-                className="pointer-events-none absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-white/25 to-transparent"
-                aria-hidden
-            />
-            <div
-                className="pointer-events-none absolute inset-x-0 -bottom-px h-px bg-gradient-to-r from-transparent via-white/25 to-transparent"
-                aria-hidden
-            />
-
-            {/* marquee track */}
-            <div className="overflow-hidden whitespace-nowrap">
-                <div className="tape-run will-change-transform">
-                    {content}
-                    {content}
-                    {content}
-                </div>
+        <div className="tape border-y border-white/10 bg-[#0C0C0F]">
+            <div className={`tape-run ${reverse ? 'tape-run--reverse' : ''}`}>
+                {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="shrink-0">{block}</div>
+                ))}
             </div>
         </div>
     );
 }
 
-function binaryChunk(i: number) {
-    const chunks = ['1101100101000', '1100100010111', '0011010011110', '0111001110001'];
-    return chunks[i % chunks.length];
+function binaryChunk() {
+    const pool = ['1101100101000', '1100100010111', '0011010011110', '0111001110001', '0011010010110'];
+    return pool[Math.floor(Math.random() * pool.length)];
 }
