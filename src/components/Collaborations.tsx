@@ -66,9 +66,9 @@ function Tape({ label, reverse = false }: { label: string; reverse?: boolean }) 
       <span className="tracking-[0.18em] text-[11px] sm:text-[12px]">
         {label}
       </span>
-            <span aria-hidden>/////</span>
-            <span aria-hidden>{binaryChunk()}</span>
-            <span aria-hidden>/////</span>
+            <span aria-hidden="true">{'/////'}</span>
+            <span aria-hidden="true">{binaryChunk()}</span>
+            <span aria-hidden="true">{'/////'}</span>
         </div>
     );
 
