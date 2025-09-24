@@ -3,24 +3,17 @@
 import Link from 'next/link';
 import { collaborators } from '@/data/collaborators';
 
-/**
- * Full-bleed collaborations band
- * - Tighter paddings
- * - Brighter text
- * - Items sit closer and share borders
- * - Top/Bottom tapes still counter-scroll + pause on hover
- */
 export default function Collaborations() {
     return (
         <section aria-labelledby="collab-title" className="mt-12">
             <Tape label="COLLABORATIONS & BRAND EXPERIENCE" reverse={false} />
 
-            {/* Brands row (full bleed) */}
-            <div className="relative bg-[#0C0C0F] border-y border-white/10">
+            <div className="relative bg-[#0C0C0F]">
                 <h2 id="collab-title" className="sr-only">
                     Collaborations & Brand Experience
                 </h2>
 
+                {/* Brands row */}
                 <div className="brands overflow-hidden select-none">
                     <div className="brands-track">
                         <Row />
@@ -48,22 +41,17 @@ function Row() {
           </span>
                 );
 
+                const cls =
+                    'brand block px-[4.25vw] sm:px-[5vw] py-10 md:py-12 text-[clamp(18px,2vw,26px)] font-semibold tracking-wide';
+
                 return (
-                    <li
-                        key={`${c.name}-${idx}`}
-                        className="brand-item shrink-0"
-                    >
+                    <li key={`${c.name}-${idx}`} className="shrink-0">
                         {c.href ? (
-                            <Link
-                                href={c.href}
-                                className="brand block px-[5vw] sm:px-[6vw] py-12 md:py-14 text-[clamp(18px,2.1vw,28px)] font-semibold tracking-wide text-white/90"
-                            >
+                            <Link href={c.href} className={`${cls} text-white transition-opacity`}>
                                 {inner}
                             </Link>
                         ) : (
-                            <span className="brand block px-[5vw] sm:px-[6vw] py-12 md:py-14 text-[clamp(18px,2.1vw,28px)] font-semibold tracking-wide text-white/90">
-                {inner}
-              </span>
+                            <span className={`${cls} text-white transition-opacity`}>{inner}</span>
                         )}
                     </li>
                 );
@@ -72,23 +60,22 @@ function Row() {
     );
 }
 
-/** Top/bottom moving tapes */
 function Tape({ label, reverse = false }: { label: string; reverse?: boolean }) {
     const block = (
         <div className="flex items-center gap-3 px-4">
       <span className="tracking-[0.18em] text-[11px] sm:text-[12px]">
         {label}
       </span>
-            <span aria-hidden className="opacity-70">/ / / / / / / / / / /</span>
-            <span aria-hidden className="opacity-70">{binaryChunk()}</span>
-            <span aria-hidden className="opacity-70">/ / / / / / /</span>
+            <span aria-hidden>/////</span>
+            <span aria-hidden>{binaryChunk()}</span>
+            <span aria-hidden>/////</span>
         </div>
     );
 
     return (
-        <div className="tape border-y border-white/10 bg-[#0C0C0F]">
+        <div className="tape">
             <div className={`tape-run ${reverse ? 'tape-run--reverse' : ''}`}>
-                {Array.from({ length: 7 }).map((_, i) => (
+                {Array.from({ length: 8 }).map((_, i) => (
                     <div key={i} className="shrink-0">
                         {block}
                     </div>

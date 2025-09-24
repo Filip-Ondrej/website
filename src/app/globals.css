@@ -23,81 +23,75 @@ body {
 
 .h1 { letter-spacing: 0.015em; font: 700 clamp(2.6rem, 4vw, 4.25rem)/1.05 var(--font-bank); }
 
-/* ---------- Full-bleed tapes (tighter + brighter) ---------- */
-.tape { overflow: hidden; }
+
+
+/* ---------- Tapes: pure white, tighter ---------- */
+.tape {
+    overflow: hidden;
+    border-top: 1px solid #fff;
+    border-bottom: 1px solid #fff;
+    background: #0c0c0f;
+}
 .tape-run {
     display: inline-flex;
     gap: 0;
     white-space: nowrap;
     will-change: transform;
     animation: tapeScroll 60s linear infinite; /* slow */
-    padding-block: 6px;                         /* thinner band */
-    color: rgba(255,255,255,.92);
+    padding-block: 6px;
+    color: #fff; /* full white text */
 }
 .tape-run--reverse { animation-direction: reverse; }
 @keyframes tapeScroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 
-/* ---------- Brands row (closer tiles, shared borders) ---------- */
-.brands { position: relative; }
+/* ---------- Brands row: no vertical borders, tighter, smart hover ---------- */
+.brands { position: relative; background: #0c0c0f; }
 .brands-track {
     display: flex;
     width: max-content;
     will-change: transform;
-    animation: brandsScroll 80s linear infinite; /* slow loop */
+    animation: brandsScroll 80s linear infinite;
 }
 @keyframes brandsScroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 
-/* pause each row independently */
+/* Pause each row independently */
 .tape:hover .tape-run,
 .brands:hover .brands-track { animation-play-state: paused; }
 
-/* tiles share borders */
-.brand-item {
-    border-right: 1px solid rgba(255,255,255,.07);
-}
-.brand-item:first-child {
-    border-left: 1px solid rgba(255,255,255,.07);
-}
+/* Dim siblings when hovering any brand */
+.brands:hover .brand { opacity: 0.5; }
+.brands:hover .brand:hover { opacity: 1; }
 
-/* text & hover */
-.brand { position: relative; transition: color .18s ease; }
-.brand:hover { color: rgba(255,255,255,1); }
-
+/* Brand text & hover chrome */
+.brand { position: relative; }
 .brand-name { position: relative; z-index: 2; }
 
-/* highlight panel on hover */
+/* Larger highlight panel on hover */
 .brand-card {
     position: absolute;
-    inset: -8px -14px -20px -14px; /* tighter than before */
-    border-left: 1px solid rgba(255,255,255,.10);
-    border-right: 1px solid rgba(255,255,255,.10);
-    background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,0) 55%);
+    inset: -14px -22px -22px -22px; /* bigger than before */
+    border-left: 1px solid rgba(255,255,255,.18);
+    border-right: 1px solid rgba(255,255,255,.18);
+    background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,0) 55%);
     opacity: 0;
-    transform: translateZ(0);
     transition: opacity .18s ease, border-color .18s ease;
 }
 .brand:hover .brand-card {
     opacity: 1;
-    border-color: rgba(255,255,255,.22);
+    border-color: rgba(255,255,255,.28);
 }
 
 .brand-corner {
-    position: absolute;
-    top: 6px; right: 8px;
-    font-size: 12px;
-    opacity: .9;
+    position: absolute; top: 6px; right: 8px;
+    font-size: 12px; color: #fff;
 }
-
 .brand-caption {
-    position: absolute;
-    left: 0; right: 0; bottom: -16px;
-    text-align: center;
-    font-size: 12px;
-    letter-spacing: .06em;
-    color: rgba(255,255,255,.9);
+    position: absolute; left: 0; right: 0; bottom: -16px;
+    text-align: center; font-size: 12px; letter-spacing: .06em; color: #fff;
 }
 
-/* reduced motion support */
+/* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
     .tape-run, .brands-track { animation: none; }
 }
+
