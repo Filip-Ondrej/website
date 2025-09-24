@@ -6,6 +6,7 @@ import Link from 'next/link';
 import MagneticButton from '@/components/MagneticButton';
 import TiltCard from '@/components/TiltCard';
 import CursorGlow from '@/components/CursorGlow';
+import Collaborations from '@/components/Collaborations';
 
 function GradientField() {
     // animated conic + radial mask – cheap and striking
@@ -109,6 +110,11 @@ export default function Home() {
                     </motion.div>
                 )}
             </AnimatePresence>
+            <main>
+                {/* ...your hero / content above... */}
+                <Collaborations />
+            </main>
+            );
         </>
     );
 }

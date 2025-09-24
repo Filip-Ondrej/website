@@ -38,3 +38,21 @@ body {
     from { transform: translateX(0); }
     to   { transform: translateX(-50%); }
 }
+
+/* --- Collaborations tape animation (respects reduced motion) --- */
+@keyframes tapeScroll {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+}
+.tape-run {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;             /* text blocks already include spacing */
+    padding-block: 8px; /* band thickness */
+    color: rgba(255,255,255,0.85);
+    font-family: var(--font-sans);
+    animation: tapeScroll 28s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+    .tape-run { animation: none; }
+}
