@@ -1,122 +1,58 @@
 @import "tailwindcss";
 
-:root {
-    --background: #ffffff;
-    --foreground: #171717;
-}
-
+/* ---- tokens ---- */
 @theme inline {
-    --color-carbon: #0B0B0D;
-    --color-plasma: #FF6A00;
-    --color-cyanfx: #00E0FF;
-
-    /* expose Bank Gothic as a token so you can write className="font-bank" */
+    --color-bg: #0b0b0d;
+    --color-fg: #e7e7ea;
+    --color-muted: #a1a1aa;
     --font-bank: var(--font-bank);
+    --font-sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
 }
 
-@media (prefers-color-scheme: dark) {
-    :root {
-        --background: #0a0a0a;
-        --foreground: #ededed;
-    }
-}
-
+:root { color-scheme: dark; }
 body {
-    background: var(--background);
-    color: var(--foreground);
-    font-family: Arial, Helvetica, sans-serif;
-}
-/* subtle white outline for Bank Gothic headings */
-.text-outline {
-    text-shadow:
-            0 0 2px rgba(255,255,255,0.25),
-            0 0 24px rgba(255,255,255,0.06);
+    background: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
-/* marquee animation (used for receipts strip) */
-@keyframes marquee {
-    from { transform: translateX(0); }
-    to   { transform: translateX(-50%); }
-}
+.container { width: 100%; max-width: 1120px; margin-inline: auto; padding-inline: 1rem; }
 
+.h1 { letter-spacing: 0.015em; font: 700 clamp(2.6rem, 4vw, 4.25rem)/1.05 var(--font-bank); }
 
 /* ---------- Full-bleed tapes ---------- */
 .tape { overflow: hidden; }
 .tape-run {
-    display: inline-flex;
-    gap: 0;
-    white-space: nowrap;
-    will-change: transform;
-    animation: tapeScroll 60s linear infinite;      /* slower */
-    padding-block: 10px;
-    color: rgba(255,255,255,.85);
+    display: inline-flex; gap: 0; white-space: nowrap; will-change: transform;
+    animation: tapeScroll 60s linear infinite; padding-block: 10px; color: rgba(255,255,255,.85);
 }
 .tape-run--reverse { animation-direction: reverse; }
+@keyframes tapeScroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 
-@keyframes tapeScroll {
-    from { transform: translateX(0); }
-    to   { transform: translateX(-50%); }
-}
-
-/* ---------- Brands row (center) ---------- */
+/* ---------- Brands row ---------- */
 .brands { position: relative; }
-.brands-track {
-    display: flex;
-    width: max-content;
-    will-change: transform;
-    animation: brandsScroll 80s linear infinite;     /* slower loop */
-}
-@keyframes brandsScroll {
-    from { transform: translateX(0); }
-    to   { transform: translateX(-50%); }
-}
+.brands-track { display: flex; width: max-content; will-change: transform; animation: brandsScroll 80s linear infinite; }
+@keyframes brandsScroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 
-/* Pause animations on row hover (each row independent) */
-.tape:hover .tape-run,
-.brands:hover .brands-track { animation-play-state: paused; }
+/* Pause on hover */
+.tape:hover .tape-run, .brands:hover .brands-track { animation-play-state: paused; }
 
-/* Brand hover treatment (card, corner, caption) */
-.brand {
-    position: relative;
-    transition: color .2s ease;
-}
+/* Brand hover chrome */
+.brand { position: relative; transition: color .2s ease; }
 .brand:hover { color: rgba(255,255,255,1); }
-
 .brand-name { position: relative; z-index: 2; }
-
-/* hidden chrome by default */
 .brand-card {
-    position: absolute;
-    inset: -14px -20px -28px -20px; /* extend below for caption line */
-    border-left: 1px solid rgba(255,255,255,.08);
-    border-right: 1px solid rgba(255,255,255,.08);
+    position: absolute; inset: -14px -20px -28px -20px;
+    border-left: 1px solid rgba(255,255,255,.08); border-right: 1px solid rgba(255,255,255,.08);
     background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0) 55%);
-    opacity: 0;
-    transform: translateZ(0);
-    transition: opacity .2s ease, border-color .2s ease;
+    opacity: 0; transform: translateZ(0); transition: opacity .2s ease, border-color .2s ease;
 }
-.brand:hover .brand-card {
-    opacity: 1;
-    border-color: rgba(255,255,255,.22);
-}
+.brand:hover .brand-card { opacity: 1; border-color: rgba(255,255,255,.22); }
+.brand-corner { position: absolute; top: 8px; right: 10px; font-size: 12px; opacity: .9; }
+.brand-caption { position: absolute; left: 0; right: 0; bottom: -18px; text-align: center; font-size: 12px; letter-spacing: .06em; color: rgba(255,255,255,.85); }
 
-.brand-corner {
-    position: absolute;
-    top: 8px; right: 10px;
-    font-size: 12px;
-    opacity: .9;
-}
-
-.brand-caption {
-    position: absolute;
-    left: 0; right: 0; bottom: -18px;
-    text-align: center;
-    font-size: 12px;
-    letter-spacing: .06em;
-    color: rgba(255,255,255,.85);
-}
-
-/* Respect reduced motion */
-@media (prefers-reduced-motion: reduce) {
-    .tape-run, .brands-track { animation: none; }
-}
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) { .tape-run, .brands-track { animation: none; } }

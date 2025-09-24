@@ -3,23 +3,15 @@
 import Link from 'next/link';
 import { collaborators } from '@/data/collaborators';
 
-/**
- * Full-bleed collaborations band:
- *  ─ Top tape (marquee left)
- *  ─ Brands row (marquee left, pauses on hover, items highlight)
- *  ─ Bottom tape (marquee right)
- */
 export default function Collaborations() {
     return (
         <section aria-labelledby="collab-title" className="mt-16">
             <Tape label="COLLABORATIONS & BRAND EXPERIENCE" reverse={false} />
 
-            {/* Brands row (full bleed) */}
             <div className="relative bg-[#0C0C0F] border-y border-white/10">
                 <h2 id="collab-title" className="sr-only">Collaborations & Brand Experience</h2>
 
-                <div className="brands overflow-hidden select-none" aria-hidden={false}>
-                    {/* track: duplicated content for seamless loop */}
+                <div className="brands overflow-hidden select-none">
                     <div className="brands-track">
                         <Row />
                         <Row />
@@ -43,11 +35,8 @@ function Row() {
                             className="brand block px-[8vw] sm:px-[10vw] py-16 md:py-20 text-[clamp(20px,2.6vw,34px)] font-semibold tracking-wide text-white/80"
                         >
               <span className="relative inline-block">
-                {/* label */}
-                  <span className="brand-name">{c.name}</span>
-
-                  {/* hover chrome */}
-                  <span className="brand-card" aria-hidden>
+                <span className="brand-name">{c.name}</span>
+                <span className="brand-card" aria-hidden>
                   <span className="brand-corner">↗</span>
                   <span className="brand-caption">[{c.caption ?? 'BRAND'}]</span>
                 </span>
@@ -70,7 +59,6 @@ function Row() {
     );
 }
 
-/** Top/bottom moving tapes */
 function Tape({ label, reverse = false }: { label: string; reverse?: boolean }) {
     const block = (
         <div className="flex items-center gap-4 px-6">
