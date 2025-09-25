@@ -11,6 +11,6 @@ export const collaborators: Collaborator[] = [
     { name: 'Flooz', href: '#', caption: 'BRAND | MOTION' },
     { name: 'mindsum', href: '#', caption: 'BRAND DESIGN | DEV' },
     { name: 'upkeep', href: '#', caption: 'APP | BRAND' },
-    { name: 'Plus X Innovation', href: '#', caption: 'PROGRAM | BRAND' },
+    { name: 'Innovation', href: '#', caption: 'PROGRAM | BRAND' },
     { name: 'Slip', href: '#', caption: 'IDENTITY | WEB' },
 ];
