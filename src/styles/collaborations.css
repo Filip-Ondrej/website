@@ -1,0 +1,328 @@
+:root {
+    /* Tapes */
+    --tape-gap: 0.75rem;     /* spacing inside tapes */
+    --tape-duration: 80s;    /* animation speed for tapes */
+    --tape-fade: 32px;       /* edge fade width */
+
+    /* Brands */
+    --brand-speed: 40s;           /* marquee speed */
+    --brand-min: 130px;           /* tile min width */
+    --brand-ideal: 14vw;          /* tile ideal width */
+    --brand-max: 230px;           /* tile max width */
+    --brand-aspect: 6 / 5;        /* width : height */
+
+    --brand-dim: .5;              /* dim non-hover tiles to 50% */
+    --brand-logo-idle: .85;       /* logo default opacity */
+    --brand-border-idle: .10;
+    --brand-border-hover: .35;
+
+    --brand-ease: cubic-bezier(.2,.8,.2,1);
+}
+
+
+/********************************************************************
+ * ---------- TAPE: rail + rows (endless, no keyframes) ----------- *
+ ********************************************************************/
+
+.tape {
+    overflow: hidden;
+    border-top: 1px solid #fff;
+    border-bottom: 1px solid #fff;
+    background: #0c0c0f;
+
+    /* soft fade on edges to hide any sub-pixel wrap */
+    -webkit-mask-image: -webkit-linear-gradient(
+            left,
+            rgba(0,0,0,0) 0,
+            rgba(0,0,0,1) var(--tape-fade, 32px),
+            rgba(0,0,0,1) calc(100% - var(--tape-fade, 32px)),
+            rgba(0,0,0,0) 100%
+    );
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-size: 100% 100%;
+    mask-image: linear-gradient(
+            to right,
+            rgba(0,0,0,0) 0,
+            rgba(0,0,0,1) var(--tape-fade, 32px),
+            rgba(0,0,0,1) calc(100% - var(--tape-fade, 32px)),
+            rgba(0,0,0,0) 100%
+    );
+    mask-repeat: no-repeat;
+    mask-size: 100% 100%;
+}
+
+/* viewport rail; JS sets height from content */
+.tape-rail {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    height: auto;
+}
+
+/* a single horizontal row of blocks; JS positions clones with translate3d */
+.tape-row {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: inline-flex;
+    gap: var(--tape-gap, 0.75rem);
+    white-space: nowrap;
+    will-change: transform;
+}
+
+/* inner structure of a block */
+.tape-block {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tape-gap, 0.75rem);
+    white-space: nowrap;
+    padding-block: 1px;        /* your thinner bands */
+    color: #fff;
+    font-family: var(--font-sans), sans-serif; /* ensure Rajdhani stack */
+}
+
+/* the chunks inside a block */
+.tape-chunk {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tape-gap, 0.75rem);
+    font-family: var(--font-sans), sans-serif;
+}
+
+/* sizes (hard set) */
+.tape .tape-label {
+    font-family: var(--font-sans), sans-serif;
+    font-size: 11px !important;   /* collaborations label */
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+.tape .tape-code {
+    font-family: var(--font-sans), sans-serif;
+    font-size: 10px !important;   /* gene code */
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+/* fixed-width slots => no width jitter during flicker */
+.tape-codeword {
+    display: inline-flex;
+    gap: 0;
+    letter-spacing: 0;
+}
+.tape-slot {
+    display: inline-block;
+    width: 1.1ch;                 /* tweak 1.05–1.15ch if needed */
+    text-align: center;
+    line-height: 1;
+}
+.tape-slot[data-mode="digit"]{
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+}
+
+/* Pause the drift on hover (JS listens to mouseenter/leave) */
+/* Keep this in case you ever reintroduce keyframes for some reason */
+.tape:hover .tape-row { animation-play-state: paused; }
+
+/* Reduced motion: JS already checks prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce){
+    .tape-row { will-change: auto; }
+}
+
+
+/********************************************************************
+ * ------- BRANDS STRIP (endless rail + full hover chrome) -------- *
+ ********************************************************************/
+
+/* subtle left/right fade so any tiny wrap is invisible */
+.brands {
+    --edge: 24px;
+    position: relative;
+    background: #0c0c0f;
+
+    /* WebKit-friendly */
+    -webkit-mask-image: -webkit-linear-gradient(
+            left,
+            rgba(0,0,0,0) 0,
+            rgba(0,0,0,1) var(--edge),
+            rgba(0,0,0,1) calc(100% - var(--edge)),
+            rgba(0,0,0,0) 100%
+    );
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-size: 100% 100%;
+
+    /* Standard */
+    mask-image: linear-gradient(
+            to right,
+            rgba(0,0,0,0) 0,
+            rgba(0,0,0,1) var(--edge),
+            rgba(0,0,0,1) calc(100% - var(--edge)),
+            rgba(0,0,0,0) 100%
+    );
+    mask-repeat: no-repeat;
+    mask-size: 100% 100%;
+}
+
+/* JS controls the horizontal drift; this is just the viewport “rail” */
+.brands-rail {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    height: auto; /* JS sets height from the measured base row */
+    touch-action: pan-x; /* better wheel/trackpad feel */
+}
+
+/* Each endlessly-tiled row (JS positions them with translate3d) */
+.brands-row {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: flex;
+    gap: 0;
+    will-change: transform;
+}
+
+
+/********************************************************************
+ * ------------------------- BRANDS TILES ------------------------- *
+ ********************************************************************/
+
+.brand {
+    position: relative;
+    width: clamp(var(--brand-min), var(--brand-ideal), var(--brand-max));
+    aspect-ratio: var(--brand-aspect);
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    transition: opacity .4s ease-in-out .05s;
+}
+
+/* Fill-tile anchor/container so content is centered & clickable */
+.brand-link {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    text-decoration: none;
+    outline: none;
+}
+
+/* SVG/PNG logos */
+.brand-logo {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    opacity: var(--brand-logo-idle);
+    transition: opacity .25s ease;
+}
+
+/* Text fallback */
+.brand-name {
+    font-size: clamp(1rem, 1.6vw, 1.8rem);
+    font-weight: 700;
+    text-transform: none;
+    color: #fff;
+}
+
+/* Dim siblings on hover, highlight only the hovered tile */
+.brands:hover .brand { opacity: var(--brand-dim); }
+.brands:hover .brand:hover { opacity: 1; }
+.brands:hover .brand:hover .brand-logo { opacity: 1; }
+
+/* Also show focus the same as hover (keyboard users) */
+.brand-link:focus-visible ~ .brand-card,
+.brand-link:focus-visible .brand-logo {
+    opacity: 1;
+}
+.brand-link:focus-visible {
+    outline: 2px solid rgba(255,255,255,.35);
+    outline-offset: 2px;
+}
+
+/* Hover highlight card + borders (full-tile) */
+.brand-card {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+
+    /* subtle gradient overlay + bottom vignette */
+    background:
+            linear-gradient(180deg,
+            rgba(255,255,255,.22) 0%,
+            rgba(255,255,255,.10) 36%,
+            rgba(255,255,255,.04) 70%,
+            rgba(255,255,255,0) 100%),
+            radial-gradient(120% 60% at 50% 100%,
+            rgba(0,0,0,.16),
+            rgba(0,0,0,0) 60%);
+
+    opacity: 0;
+    transition:
+            opacity .45s ease-in-out,
+            border-color .45s ease-in-out,
+            background .45s ease-in-out;
+
+    border-left: 1px solid rgba(255,255,255,var(--brand-border-idle));
+    border-right: 1px solid rgba(255,255,255,var(--brand-border-idle));
+}
+.brand:hover .brand-card {
+    opacity: 1;
+    border-color: rgba(255,255,255,var(--brand-border-hover));
+}
+
+/* Retina border crispness */
+@media (min-resolution: 1.5dppx) {
+    .brand-card {
+        border-left: 1px solid rgba(255,255,255,var(--brand-border-idle));
+        border-right: 1px solid rgba(255,255,255,var(--brand-border-idle));
+    }
+}
+
+/* Corner icon (arrow in brackets) */
+.brand-corner {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    width: 28px;
+    height: 28px;
+    pointer-events: none;
+    opacity: 0;
+
+    /* start collapsed in the lower-left of its own box */
+    transform: translate(-6px, 6px) scale(0.25);
+    transform-origin: bottom left;
+    transition:
+            opacity .28s ease-out,
+            transform .45s var(--brand-ease);
+}
+.brand-corner-svg { stroke: rgba(255,255,255,.92); }
+
+/* On hover/focus, reveal + scale up to full size */
+.brand:hover .brand-corner,
+.brand-link:focus-visible ~ .brand-corner {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+}
+
+/* Caption: make it pop and place consistently */
+.brand-caption {
+    position: absolute;
+    left: 12px;
+    bottom: 8px;
+    font-size: 14px;
+    letter-spacing: .12em;
+    color: rgba(255,255,255,.92);
+    text-shadow: 0 0 6px rgba(0,0,0,.35);
+}
+
+/* Reduced motion: keep visuals but remove transforms/anim feel */
+@media (prefers-reduced-motion: reduce) {
+    .brand-corner {
+        transition: opacity .2s ease;
+        transform: none;
+    }
+    .brand:hover .brand-corner,
+    .brand-link:focus-visible ~ .brand-corner {
+        opacity: 1;
+    }
+}

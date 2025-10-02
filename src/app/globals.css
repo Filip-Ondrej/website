@@ -1,25 +1,23 @@
 @import "tailwindcss";
 
-/* ---- tokens ---- */
 @theme inline {
     --color-bg: #0b0b0d;
     --color-fg: #e7e7ea;
     --color-muted: #a1a1aa;
-    --font-bank: var(--font-bank);
-    --font-sans: 'Rajdhani', 'Rajdhani Fallback', sans-serif;
+
+    /* Fonts */
+    --font-bank: 'Bank Gothic', 'bankGothic Fallback';
+    --font-sans: 'Rajdhani', 'Rajdhani Fallback';
 }
 
 :root {
     color-scheme: dark;
-    --tape-gap: 0.75rem;   /* spacing inside tapes */
-    --tape-duration: 80s;  /* animation speed for tapes */
-    --tape-fade: 32px; /* (before 24px edge fade width */
 }
 
 body {
     background: var(--color-bg);
     color: var(--color-fg);
-    font-family: var(--font-sans);
+    font-family: var(--font-sans), monospace; /* Rajdhani everywhere by default */
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -35,205 +33,4 @@ body {
 .h1 {
     letter-spacing: 0.015em;
     font: 700 clamp(2.6rem, 4vw, 4.25rem)/1.05 var(--font-bank);
-}
-
-/* =================== TAPE =================== */
-/* knobs (merge with your existing :root if you already define these) */
-/* rail */
-.tape{
-    overflow: hidden;
-    border-top: 1px solid #fff;
-    border-bottom: 1px solid #fff;
-    background: #0c0c0f;
-
-    /* edge fade so tiny wrap snaps are invisible */
-    -webkit-mask-image: -webkit-linear-gradient(
-            left,
-            rgba(0,0,0,0) 0,
-            rgba(0,0,0,1) var(--tape-fade),
-            rgba(0,0,0,1) calc(100% - var(--tape-fade)),
-            rgba(0,0,0,0) 100%
-    );
-    mask-image: linear-gradient(
-            to right,
-            rgba(0,0,0,0) 0,
-            rgba(0,0,0,1) var(--tape-fade),
-            rgba(0,0,0,1) calc(100% - var(--tape-fade)),
-            rgba(0,0,0,0) 100%
-    );
-}
-
-/* moving track (CSS animation, seamless -50% loop) */
-.tape-run{
-    display: flex;
-    gap: var(--tape-gap);
-    white-space: nowrap;
-    will-change: transform;
-    transform: translateZ(0);
-    backface-visibility: hidden;
-    animation: tapeScroll var(--tape-duration) linear infinite;
-    padding-block: 1px;
-    color: #fff;
-
-    /* force sans stack (prevents Rajdhani from cascading in) */
-    font-family: var(--font-sans);
-    -webkit-font-smoothing: antialiased;
-}
-.tape-run--reverse{ animation-direction: reverse; }
-
-@keyframes tapeScroll{
-    from{ transform: translate3d(0,0,0); }
-    to  { transform: translate3d(-50%,0,0); }
-}
-
-/* inner layout */
-.tape-block{
-    display: inline-flex;
-    align-items: center;
-    gap: var(--tape-gap);
-    white-space: nowrap;
-}
-.tape-chunk{
-    display: inline-flex;
-    align-items: center;
-    gap: var(--tape-gap);
-    font-family: var(--font-sans);
-}
-
-/* sizes (hard set) */
-.tape .tape-label{
-    font-family: var(--font-sans);
-    font-size: 11px !important;   /* collaborations label */
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-}
-.tape .tape-code{
-    font-family: var(--font-sans);
-    font-size: 10px !important;   /* gene code */
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-}
-
-/* code displayed as fixed slots (no width jitter during flicker) */
-.tape-codeword{
-    display: inline-flex;
-    gap: 0;
-    letter-spacing: 0;
-}
-.tape-slot{
-    display: inline-block;
-    width: 1.1ch;                 /* tweak 1.05–1.15ch if needed */
-    text-align: center;
-    line-height: 1;
-}
-/* when flickering digits, use tabular numerals (if available) */
-.tape-slot[data-mode="digit"]{
-    font-variant-numeric: tabular-nums;
-    font-feature-settings: "tnum" 1;
-}
-
-/* accessibility: stop motion */
-@media (prefers-reduced-motion: reduce){
-    .tape-run{ animation: none; }
-}
-
-/* ---------- Brands row: uniform tiles, smooth highlight, extra polish ---------- */
-.brands {
-    position: relative;
-    background: #0c0c0f;
-}
-
-.brands-track {
-    display: flex;
-    width: max-content;
-    will-change: transform;
-    animation: brandsScroll 60s linear infinite;
-}
-
-@keyframes brandsScroll {
-    from {
-        transform: translateX(0);
-    }
-    to {
-        transform: translateX(-50%);
-    }
-}
-
-/* Pause rows independently on hover/tap */
-.tape:hover .tape-run,
-.brands:hover .brands-track,
-.brands:active .brands-track {
-    animation-play-state: paused;
-}
-
-/* Brand tile sizing (ratio consistent for all) */
-.brand {
-    position: relative;
-    width: clamp(130px, 14vw, 230px);
-    aspect-ratio: 6 / 5; /* width : height */
-    display: grid;
-    place-items: center;
-    flex-shrink: 0;
-    transition: opacity .4s ease-in-out .05s; /* smoother + longer */
-}
-
-.brand-name {
-    font-size: clamp(1rem, 1.6vw, 1.8rem); /* scales nicely */
-    font-weight: 700; /* bold */
-    text-transform: none; /* keep brand case natural */
-    color: #fff;
-}
-
-/* Dim siblings on hover, highlight only one */
-.brands:hover .brand {
-    opacity: 0.5;
-}
-
-.brands:hover .brand:hover {
-    opacity: 1;
-}
-
-/* Highlight card background + borders */
-.brand-card {
-    position: absolute;
-    inset: 0;
-
-    /* subtle gradient overlay + bottom vignette */
-    background: linear-gradient(180deg,
-    rgba(255, 255, 255, .22) 0%,
-    rgba(255, 255, 255, .10) 36%,
-    rgba(255, 255, 255, .04) 70%,
-    rgba(255, 255, 255, 0) 100%),
-    radial-gradient(120% 60% at 50% 100%,
-            rgba(0, 0, 0, .16),
-            rgba(0, 0, 0, 0) 60%);
-
-    opacity: 0;
-    transition: opacity .45s ease-in-out,
-    border-color .45s ease-in-out,
-    background .45s ease-in-out;
-    border-left: 0.5px solid rgba(255, 255, 255, .25);
-    border-right: 0.5px solid rgba(255, 255, 255, .25);
-}
-
-/* Show highlight on hover */
-.brand:hover .brand-card {
-    opacity: 1;
-    border-color: rgba(255, 255, 255, .35);
-}
-
-/* Retina border crispness */
-@media (min-resolution: 1.5dppx) {
-    .brand-card {
-        border-left-width: 0.5px;
-        border-right-width: 0.5px;
-    }
-}
-
-/* Reduced motion */
-@media (prefers-reduced-motion: reduce) {
-    .tape-run,
-    .brands-track {
-        animation: none;
-    }
 }
