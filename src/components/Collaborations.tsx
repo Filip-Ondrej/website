@@ -1,12 +1,13 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import {collaborators} from '@/data/collaborators';
 
 export default function Collaborations() {
     return (
         <section aria-labelledby="collab-title" className="mt-12">
-            <Tape label="COLLABORATIONS & BRAND EXPERIENCE" reverse={false}/>
+            <Tape label="COLLABORATIONS & COMPANY EXPERIENCE" reverse={false}/>
 
             <div className="relative bg-[#0C0C0F]">
                 <h2 id="collab-title" className="sr-only">
@@ -22,7 +23,7 @@ export default function Collaborations() {
                 </div>
             </div>
 
-            <Tape label="COLLABORATIONS & BRAND EXPERIENCE" reverse/>
+            <Tape label="COLLABORATIONS & COMPANY EXPERIENCE" reverse/>
         </section>
     );
 }
@@ -51,42 +52,111 @@ function Row() {
     );
 }
 
-function Tape({label, reverse = false}: { label: string; reverse?: boolean }) {
-    const block = (
-        <div className="tape-block">
-    <span className="tape-chunk" aria-hidden="true">
+function Tape({
+                  label,
+                  code = 'NRG1-SNP-TT',
+                  reverse = false,
+              }: {
+    label: string;
+    code?: string;
+    reverse?: boolean;
+}) {
+    const BLOCKS_PER_ROW = 8;
+
+    // timing knobs
+    const WAIT_MIN_S = 4, WAIT_MAX_S = 8;         // idle between flickers
+    const FLICKER_MIN_S = 0.5, FLICKER_MAX_S = 1.5;   // flicker duration
+    const FLICKER_INTERVAL_MS = 10;               // flip cadence
+
+    const codeUp = code.toUpperCase();
+    const len = codeUp.length;
+
+    const [current, setCurrent] = useState(codeUp);
+    const [mode, setMode] = useState<'word' | 'digit'>('word');
+
+    useEffect(() => {
+        const prefersReduced =
+            window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+        if (prefersReduced) return;
+
+        let flickerId: number | null = null;
+        let settleId: number | null = null;
+
+        const randInt = (min: number, max: number) =>
+            Math.floor(Math.random() * (max - min + 1)) + min;
+        const randMs = (a: number, b: number) => randInt(a * 1000, b * 1000);
+        const rand01 = () => (Math.random() < 0.5 ? '0' : '1');
+
+        const startCycle = () => {
+            setMode('digit');
+
+            const doFlick = () => {
+                // always generate exactly `len` digits to avoid width drift
+                let s = '';
+                for (let i = 0; i < len; i++) s += rand01();
+                setCurrent(s);
+            };
+
+            doFlick();
+            flickerId = window.setInterval(doFlick, FLICKER_INTERVAL_MS);
+
+            settleId = window.setTimeout(() => {
+                if (flickerId) clearInterval(flickerId);
+                setCurrent(codeUp);       // settle back to the gene code
+                setMode('word');
+                settleId = window.setTimeout(startCycle, randMs(WAIT_MIN_S, WAIT_MAX_S));
+            }, randMs(FLICKER_MIN_S, FLICKER_MAX_S));
+        };
+
+        // kick things off after an initial wait
+        settleId = window.setTimeout(
+            startCycle,
+            Math.floor(Math.random() * (WAIT_MAX_S - WAIT_MIN_S + 1) + WAIT_MIN_S) * 1000
+        );
+
+        return () => {
+            if (flickerId) clearInterval(flickerId);
+            if (settleId) clearTimeout(settleId);
+        };
+    }, [codeUp, len]); // <- no `current` here
+
+    const Slashes = () => (
+        <span className="tape-chunk" aria-hidden="true">
       {'/////////////////////////'}
     </span>
-            <span aria-hidden="true">{binaryChunk()}</span>
-            <span className="tape-chunk" aria-hidden="true">
-      {'/////////////////////////'}
-    </span>
-            <span className="tracking-[0.18em] text-[11px] sm:text-[12px]">
-      {label}
-    </span>
+    );
+
+    const Block = (i: number) => (
+        <div className="tape-block" key={i}>
+            <Slashes />
+            <span className="tape-code tape-codeword" aria-hidden="true">
+        {current.split('').map((ch, idx) => (
+            <span
+                className="tape-slot"
+                data-mode={mode === 'digit' ? 'digit' : 'word'}
+                key={idx}
+            >
+            {ch}
+          </span>
+        ))}
+      </span>
+            <Slashes />
+            <span className="tape-label">{label}</span>
         </div>
     );
+
+    const blocks = Array.from({ length: BLOCKS_PER_ROW }, (_, i) => Block(i));
 
     return (
         <div className="tape">
             <div className={`tape-run ${reverse ? 'tape-run--reverse' : ''}`}>
-                {Array.from({length: 8}).map((_, i) => (
-                    <div key={i} className="shrink-0">
-                        {block}
-                    </div>
-                ))}
+                {blocks}
+                {blocks} {/* duplicate for seamless -50% loop */}
             </div>
         </div>
     );
 }
 
-function binaryChunk() {
-    const pool = [
-        '1101100101000',
-        '1100100010111',
-        '0011010011110',
-        '0111001110001',
-        '0011010010110',
-    ];
-    return pool[Math.floor(Math.random() * pool.length)];
-}
+//export default Tape;
+
+
