@@ -3,8 +3,8 @@ import Collaborations from '@/components/Collaborations';
 //import ProgressTimeline, { demoProgressEvents } from '@/components/ProgressTimeline';
 //import ProgressTimeline, { demoProgressEvents, ProgressEvent } from '@/components/ProgressTimeline';
 import ProgressTimeline from '@/components/ProgressTimeline';
-import { demoProgressEvents, type ProgressEvent } from '@/data/graphData';
-const events: ProgressEvent[] = demoProgressEvents; // Or define your own array here
+import { filipRealEvents, type ProgressEvent } from '@/data/graphData';
+const events: ProgressEvent[] = filipRealEvents; // Or define your own array here
 
 export default function Home() {
     return (
