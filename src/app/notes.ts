@@ -4,3 +4,15 @@
 * junior akademia change logo?
 *
 * */
+/*
+*
+*
+* Highlights from 2016–2026: 12 launches, 7 awards, press in X, and teams I was lucky to lead.
+*
+*
+*
+*
+*
+* */
+
+

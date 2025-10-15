@@ -1,0 +1,445 @@
+/* ==================== CONTAINER ==================== */
+.timeline-wrap {
+    position: relative;
+    overflow-x: auto;
+    overflow-y: visible;
+    border-top: 1px solid #fff;
+    border-bottom: 1px solid #fff;
+    padding: 10px 100px;
+    box-sizing: border-box;
+    min-height: 400px;
+    outline: none; /* custom focus below */
+}
+
+.timeline-wrap:focus-visible {
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.25) inset;
+    border-radius: 4px;
+}
+
+.timeline-rail {
+    position: relative;
+    margin: 0 auto;
+    will-change: width;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0;
+}
+
+.timeline-plot { position: relative; }
+.timeline-svg:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(255,255,255,.25) inset; border-radius: 6px; }
+
+/* ==================== HEADER SECTION ==================== */
+.tl-header {
+    position: relative;
+    margin: 0;
+    pointer-events: none;
+}
+
+.tl-header-spine {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: rgba(255,255,255,0.16);
+    pointer-events: none;
+}
+
+.tl-header-title {
+    position: absolute;
+    left: 20px;
+    bottom: 6px; /* slightly tighter */
+    margin: 0;
+    font: 700 clamp(32px, 5vw, 72px)/1.08 "Rajdhani", monospace;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.88);
+}
+
+.tl-header-emphasis {
+    color: #FFD447;
+    font-size: 1.14em;
+    display: block;
+}
+
+/* ==================== HAIRLINES & CONNECTORS ==================== */
+.tl-line {
+    height: 1px;
+    background: rgba(255,255,255,0.12);
+    width: 100%;
+    margin: 0;
+    pointer-events: none;
+}
+
+.tl-line--top { background: rgba(255,255,255,0.16); margin-bottom: 14px; }
+.tl-line--bottom { margin-top: 24px; }
+
+.tl-connector {
+    position: absolute;
+    right: 0;
+    top: 260px;
+    bottom: 0;
+    width: 1px;
+    background: rgba(255,255,255,0.14);
+    pointer-events: none;
+}
+
+/* ==================== LEGEND ==================== */
+/* Inline SVG legend text */
+.legend-section-title {
+    font: 600 10px/1 'Rajdhani','Rajdhani Fallback',monospace;
+    letter-spacing: 0.18em;
+    fill: rgba(255,255,255,0.52);
+    text-transform: uppercase;
+}
+
+.legend-inline-label {
+    font: 500 12px/1 'Rajdhani','Rajdhani Fallback',monospace;
+    letter-spacing: 0.04em;
+    fill: rgba(255,255,255,0.8);
+}
+
+/* Put years BELOW month labels */
+.year-caption {
+    transform: translateX(-50%) translateY(56px); /* was ~35px */
+}
+
+.legend-section-title {
+    font: 600 10px/1 'Rajdhani', 'Rajdhani Fallback', monospace;
+    letter-spacing: 0.18em;
+    color: rgba(255, 255, 255, 0.52);
+    margin-bottom: 10px;
+    text-transform: uppercase;
+}
+
+.legend-items { display: flex; flex-direction: column; gap: 7px; }
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font: 500 12px/1 'Rajdhani', 'Rajdhani Fallback', monospace;
+    color: rgba(255, 255, 255, 0.8);
+    cursor: default;
+}
+
+.legend-dot-icon {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    border: 1px solid rgba(255,255,255,0.25); /* tiny border for light swatches */
+}
+
+@media (max-width: 980px) {
+    .timeline-legend {
+        position: static;
+        margin: 10px 0 0 0;
+        right: auto;
+        align-self: flex-start; /* keep it near the plot, not the header */
+    }
+}
+
+/* ==================== GRAPH ELEMENTS ==================== */
+.progress-path {
+    fill: none;
+    stroke: #fff;
+    stroke-width: 2.5;
+}
+
+.tick {
+    stroke: rgba(255, 255, 255, 0.42);
+    stroke-width: 1;
+}
+
+.month-group { opacity: 0; }
+.month-group.visible { opacity: 1; }
+
+.month-tick {
+    stroke: rgba(255, 255, 255, 0.12); /* micro-contrast down a touch */
+    stroke-width: 0.6;
+    stroke-dasharray: 2 2;
+}
+
+.month-bottom-tick {
+    stroke: rgba(255, 255, 255, 0.28);
+    stroke-width: 0.9;
+}
+
+.month-label {
+    font: 500 10px/1 'Rajdhani', 'Rajdhani Fallback', monospace;
+    letter-spacing: 0.05em;
+    fill: rgba(255, 255, 255, 0.64);
+}
+
+/* ==================== DOTS ==================== */
+.dot { cursor: pointer; }
+.dot-glow { filter: blur(8px); }
+
+.dot-label {
+    font: 600 12px/1 'Rajdhani', 'Rajdhani Fallback', monospace;
+    letter-spacing: 0.08em;
+    fill: #fff;
+    paint-order: stroke;
+    stroke: rgba(0, 0, 0, 0.55);
+    stroke-width: 3px;
+}
+
+/* ==================== YEAR BANDS (visual captions only) ==================== */
+.years { pointer-events: none; }
+
+.year-typo,
+.y-axis-caption {
+    color: rgba(255,255,255,0.78);
+    fill: currentColor;
+    font-family: 'Rajdhani', 'Rajdhani Fallback', monospace;
+    font-weight: 600;
+    font-size: 11px; /* brighter & slightly larger for legibility */
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.level-label {
+    fill: rgba(255, 255, 255, 0.72);
+    font: 600 10px/1 'Rajdhani', 'Rajdhani Fallback', monospace;
+    letter-spacing: .10em;
+}
+
+.year-band {
+    position: absolute;
+    top: 0;
+    height: calc(100% - 24px);
+    pointer-events: none; /* captions only; interactions handled on SVG for full-height hover */
+}
+
+.year-band.is-focus {
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0) 40%);
+    transition: background 0.45s cubic-bezier(0.22,1,0.36,1);
+}
+
+.year-caption {
+    position: absolute;
+    left: 50%;
+    bottom: 2px;
+    transform: translateX(-50%) translateY(35px);
+    font: 600 12px/1 'Rajdhani', 'Rajdhani Fallback', monospace;
+    letter-spacing: 0.18em; /* tiny boost */
+    color: rgba(255, 255, 255, 0.78);
+    transition: font-size 0.25s cubic-bezier(0.22,1,0.36,1);
+}
+
+.year-band.is-focus .year-caption {
+    font-size: 14px;
+    color: #fff;
+}
+
+/* ==================== CHAPTERS ==================== */
+.chapter-line {
+    stroke: rgba(255,255,255,0.85);
+    stroke-dasharray: 5 5;
+    cursor: default;
+}
+
+.chapter-label {
+    font: 600 12px/1 'Rajdhani', 'Rajdhani Fallback', monospace;
+    letter-spacing: 0.16em;
+    fill: rgba(255,255,255,0.92);
+    text-anchor: start;
+}
+
+/* ==================== MODALS (kept for future use) ==================== */
+.article-modal {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex; justify-content: center; align-items: center;
+    z-index: 20;
+}
+
+.article-content {
+    background: #1a1a1a;
+    border: 1px solid #fff;
+    border-radius: 6px;
+    padding: 20px;
+    width: 400px; max-height: 80vh;
+    overflow-y: auto; position: relative; color: #fff;
+    font: 14px/1.4 'Rajdhani', sans-serif;
+}
+
+.article-content h3 { margin: 0 0 10px; font-size: 18px; font-weight: 600; }
+.article-content p  { margin: 0 0 15px; }
+
+.close-article {
+    position: absolute; top: 10px; right: 10px;
+    background: none; border: none; color: #fff;
+    font-size: 16px; cursor: pointer;
+}
+/* Inline legend inside the plot (top-right, no pointer capture) */
+/* Legend - moved left to align with info button */
+.legend-inline{
+    position: absolute;
+    top: -2px;
+    right: 40px;  /* Moved left to make room for info button */
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    pointer-events: none;
+    background: transparent;
+}
+.legend-inline-title{
+    font:600 10px/1 'Rajdhani','Rajdhani Fallback',monospace;
+    letter-spacing:.18em;
+    color:rgba(255,255,255,.52);
+    text-transform:uppercase;
+    margin-right:6px;
+}
+.legend-inline-item{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    font:500 12px/1 'Rajdhani','Rajdhani Fallback',monospace;
+    color:rgba(255,255,255,.85);
+}
+.legend-inline-dot{
+    width:9px;height:9px;border-radius:50%;
+    border:1px solid rgba(255,255,255,.25);
+}
+
+/* Year typography (since years are now SVG <text>) */
+.year-typo{
+    fill:rgba(255,255,255,.78);
+    font:600 12px/1 'Rajdhani','Rajdhani Fallback',monospace;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+}
+
+/* Keep existing classes for grid/labels/dots as you had them */
+
+/* ==================== INTERACTION IMPROVEMENTS ==================== */
+
+/* Interaction hint tooltip */
+/* Interaction hint - positioned next to legend */
+.interaction-hint {
+    position: absolute;
+    top: 20px;
+    right: 6px;
+    background: rgba(20, 20, 20, 0.95);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    padding: 10px 16px;
+    font: 500 13px/1.2 'Rajdhani', monospace;
+    letter-spacing: 0.04em;
+    color: rgba(255, 255, 255, 0.9);
+    z-index: 15;
+    pointer-events: none;
+    animation: hintFadeIn 0.4s ease-out;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes hintFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Info button with pulse */
+.tl-info-btn {
+    position: absolute;
+    top: -6px;
+    right: 8px;
+    background: rgba(30, 30, 30, 0.8);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.65);
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    color: rgba(255, 255, 255, 0.8);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    z-index: 12;
+    animation: infoPulse 3s ease-in-out infinite;
+}
+
+.tl-info-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+    color: rgba(255, 255, 255, 1);
+    transform: scale(1.1);
+    animation: none;
+}
+
+@keyframes infoPulse {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.3);
+        opacity: 0.8;
+    }
+    50% {
+        box-shadow: 0 0 0 4px rgba(255, 255, 255, 0);
+        opacity: 1;
+    }
+}
+
+/* Lock indicator pulse */
+@keyframes lockHintPulse {
+     0%, 100% {
+         opacity: 0.5;
+     }
+     50% {
+         opacity: 0.85;
+     }
+ }
+
+.year-lock-hint {
+    pointer-events: none;
+}
+
+/* Enhanced dot glow - already in your code, just making sure */
+.dot-glow {
+    filter: blur(10px);
+    pointer-events: none;
+}
+
+/* Locked year background highlight */
+.year-locked-bg {
+    fill: rgba(255, 215, 0, 0.08);
+    transition: opacity 0.3s ease;
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+    .interaction-hint {
+        top: auto;
+        bottom: 20px;
+        right: 50%;
+        transform: translateX(50%);
+        font-size: 12px;
+        padding: 8px 12px;
+    }
+
+    .tl-info-btn {
+        top: 6px;
+        right: 6px;
+        width: 32px;
+        height: 32px;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .month-group,
+    .dot,
+    .dot-glow,
+    .year-typo,
+    .chapter-label,
+    .interaction-hint,
+    .tl-info-btn { transition: none !important; animation: none !important; }
+}
