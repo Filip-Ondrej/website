@@ -17,40 +17,58 @@ export type ChapterLine = {
 
 export const filipRealEvents: ProgressEvent[] = [
 
-    // 2015 - The Spark
-    { year: 2016, month: 1, level: 0.8, impactType: 'Regional', category: 'First Competition' },
+    // Start of the Graph
+    { year: 2016, month: 1, level: 0, impactType: 'None', category: '', dotSize: 2 },
 
-    // 2016 - Taking Charge (Age 12, 7th grade)
-    { year: 2016, month: 3, level: 1.5, impactType: 'National', category: 'Robocup Win' },
-    { year: 2016, month: 9, level: 1.2, impactType: 'Lesson', category: 'Lab Access Key' },
-    { year: 2016, month: 11, level: 2.8, impactType: 'National', category: 'FLL Semifinals' },
-    { year: 2016, month: 12, level: 1.8, impactType: 'Lesson', category: 'Leadership Lesson' },
+    // 2016 - Taking Charge (Age 12, 6th grade)
+    { year: 2016, month: 3, level: 0.6, impactType: 'National', category: 'First RoboCup Win' },
+    { year: 2016, month: 6.5, level: 0.8, impactType: 'Regional', category: 'LegoBot Miracle' },
+    { year: 2016, month: 12, level: 1.2, impactType: 'Regional', category: 'FLL Decisive Triumph' },
+    { year: 2016, month: 12.5, level: 0.6, impactType: 'Lesson', category: 'Leadership Lesson' },
 
     // 2017 - Hard Lessons
-    { year: 2017, month: 4, level: 0.5, impactType: 'Lesson', category: 'Magic Show Disaster', dotSize: 13 },
-    { year: 2017, month: 11, level: 2.2, impactType: 'Regional', category: 'Rescue Line' },
+    { year: 2017, month: 4, level: 1.0, impactType: 'National', category: 'RoboCup Concert' },
+    { year: 2017, month: 4.5, level: 0.7, impactType: 'Lesson', category: 'Magic Show Disaster' },
+    { year: 2017, month: 6.2, level: 0.8, impactType: 'Regional', category: 'RBA CNC/Race'},
+    { year: 2017, month: 6.5, level: 0.9, impactType: 'Regional', category: 'LegoBot Improv'},
+    { year: 2017, month: 12.5, level: 1.1, impactType: 'Regional', category: 'FLL Goliath' },
+    { year: 2017, month: 12.8, level: 0.7, impactType: 'Lesson', category: 'Time is Money' },
+    //robolab key + lesson when they took it?
 
     // 2018 - Going International (Age 14, 8th grade)
-    { year: 2018, month: 3, level: 3.2, impactType: 'International', category: 'Qualified for Canada' },
-    { year: 2018, month: 6, level: 3.8, impactType: 'International', category: 'RoboCup Montreal' },
-    { year: 2018, month: 8, level: 3.5, impactType: 'National', category: 'Educational Robot' },
-    { year: 2018, month: 9, level: 2.0, impactType: 'Lesson', category: 'Teacher Drowning' },
+    { year: 2018, month: 3, level: 0.9, impactType: 'National', category: 'OnStage Showmanship' },
+    { year: 2018, month: 4, level: 1.2, impactType: 'International', category: 'Expo Singapore' },
+    { year: 2018, month: 6, level: 1.9, impactType: 'Lesson', category: 'Qualified for Canada?' },
+    { year: 2018, month: 7.2, level: 1.6, impactType: 'International', category: 'RoboCup Montreal' },
 
     // 2019 - Breakthrough Year (Age 15, 9th grade)
-    { year: 2019, month: 3, level: 4.2, impactType: 'National', category: 'Robocup National Win' },
-    { year: 2019, month: 6, level: 4.8, impactType: 'World-Class', category: 'RoboCup Sydney 4th', article: '2019-06-sydney' },
-    { year: 2019, month: 7, level: 4.5, impactType: 'Exceptional', category: 'Mayor Award' },
-    { year: 2019, month: 9, level: 3.5, impactType: 'National', category: 'Perfect Exam Scores' },
+    { year: 2019, month: 1.3, level: 1.7, impactType: 'Regional', category: 'FLL' },
+    { year: 2019, month: 4, level: 2.1, impactType: 'National', category: 'Persistence to Win' },
+    { year: 2019, month: 6, level: 2.2, impactType: 'Regional', category: 'RBA KE' },
+    { year: 2019, month: 6.7, level: 2.5, impactType: 'Exceptional', category: 'Mayor Award' },
+    { year: 2019, month: 7.2, level: 2.9, impactType: 'World-Class', category: 'RoboCup Sydney 4th', article: '2019-06-sydney' },
+    { year: 2019, month: 7.5, level: 2.3, impactType: 'Lesson', category: '10 Seconds' },
+    { year: 2019, month: 9.5, level: 1.7, impactType: 'Lesson', category: 'Moving On' },
+    { year: 2019, month: 11, level: 1.9, impactType: 'Lesson', category: 'We Are So BACK' }, //key
 
     // 2020 - High School King (Age 16-17, 1st-2nd year)
-    { year: 2020, month: 2, level: 3.2, impactType: 'National', category: 'Heat Pump Solution' },
-    { year: 2020, month: 5, level: 3.8, impactType: 'International', category: 'VALT Erasmus Lead' },
-    { year: 2020, month: 11, level: 4.9, impactType: 'World-Class', category: 'World Champion' },
+    { year: 2020, month: 1.3, level: 2.1, impactType: 'Regional', category: 'FLL New Crew' }, //TODO: what happened here?
+    { year: 2020, month: 2.5, level: 2.2, impactType: 'National', category: 'Robotiada' },
+    { year: 2020, month: 5.0, level: 2.6, impactType: 'Lesson', category: 'Going Electric' },//3x3x3 ledcube
+    { year: 2020, month: 6.5, level: 2.7, impactType: 'None', category: 'Getting Better' },//naklonena rovina
+    { year: 2020, month: 9, level: 3.0, impactType: 'Lesson', category: 'First Proper Project' },//tictactoe
+    //{ year: 2020, month: 11.3, level: 2.2, impactType: 'Regional', category: 'Heat Pump Solution' },
 
     // 2021 - Recognition Wave
-    { year: 2021, month: 1, level: 4.3, impactType: 'Exceptional', category: '3D Print National Win' },
-    { year: 2021, month: 4, level: 5.2, impactType: 'Exceptional', category: 'Young Creator 2021' },
-    { year: 2021, month: 9, level: 3.8, impactType: 'National', category: 'National TV Coverage' },
+    { year: 2021, month: 1.2, level: 3.3, impactType: 'Regional', category: 'Uniting Power' }, //TODO: when was FLL
+    { year: 2021, month: 2.2, level: 3.1, impactType: 'National', category: 'Robotiada' },
+    { year: 2021, month: 3.2, level: 3.3, impactType: 'Exceptional', category: 'Just for Fun' },//SOC
+    { year: 2021, month: 4.9, level: 3.7, impactType: 'National', category: '3D Printing Master' },
+    { year: 2021, month: 5.1, level: 3.9, impactType: 'National', category: 'No Stopping Now' },//Robocup
+    { year: 2021, month: 6.2, level: 3.0, impactType: 'Lesson', category: 'Istrobot' },
+    { year: 2021, month: 6.8, level: 3.0, impactType: 'International', category: 'FLL WorldCup' },
+    //{ year: 2021, month: 4, level: 3.0, impactType: 'National', category: 'Young Creator 2021' },
+    //{ year: 2021, month: 9, level: 3.0, impactType: 'National', category: 'National TV Coverage' },
 
     // 2022 - Dominance (Age 18, 3rd year)
     { year: 2022, month: 2, level: 4.5, impactType: 'International', category: 'Europe 4th + Hardware Award' },
@@ -96,9 +114,9 @@ export const filipRealEvents: ProgressEvent[] = [
 ];*/
 
 export const chapterLines: ChapterLine[] = [
-    { year: 2016, month: 1, label: 'Chapter 1', caption: 'Learning & Building' },
-    { year: 2019, month: 5, label: 'Chapter 2', caption: 'Breaking Through' },
-    { year: 2023, month: 2, label: 'Chapter 3', caption: 'Leading & Dominating' },
+    { year: 2016, month: 3, label: 'Chapter 1', caption: 'Learning & Building' },
+    { year: 2019, month: 9, label: 'Chapter 2', caption: 'Breaking Through' },
+    { year: 2023, month: 10, label: 'Chapter 3', caption: 'Leading & Dominating' },
 ];
 
 export const impactConfig = {
