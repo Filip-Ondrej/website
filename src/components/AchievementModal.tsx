@@ -414,7 +414,7 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                             },
                             blockquote: ({ children, ...props }) => (
                                 <blockquote className="story-quote" {...props}>
-                                    <span className="quote-mark">"</span>
+                                    <span className="quote-mark">|</span>
                                     {children}
                                 </blockquote>
                             ),
