@@ -1,5 +1,6 @@
 import Collaborations from '@/components/Collaborations';
 import ProgressTimeline from '@/components/ProgressTimeline';
+import PromoVideo from '@/components/PromoVideo';
 //import { filipRealEvents, type ProgressEvent } from '@/data/graphData';
 //const events: ProgressEvent[] = filipRealEvents; // Or define your own array here
 
@@ -16,13 +17,8 @@ export default function Home() {
                     </p>
                 </div>
             </section>
-            <ProgressTimeline
-                //events={events}
-                //height={300} // Adjust height as needed
-                //baseYearWidth={100} // Wider base width for years
-                //expandedFactor={3.6} // Matches your requirement
-                //className={styles.progresstimeline}
-                />
+            <PromoVideo />
+            <ProgressTimeline />
             <Collaborations />
         </main>
     );

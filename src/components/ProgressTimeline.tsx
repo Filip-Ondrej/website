@@ -3,8 +3,8 @@
 import React from 'react';
 import clsx from 'clsx';
 import {filipRealEvents, chapterLines, impactConfig} from '@/data/graphData';
-import AchievementModal, { AchievementData } from './AchievementModal';
-import { loadAchievement } from '@/lib/loadAchievement';
+import AchievementModal, {AchievementData} from './AchievementModal';
+import {loadAchievement} from '@/lib/loadAchievement';
 
 // ==================== TYPES ====================
 export type ProgressEvent = {
@@ -15,6 +15,7 @@ export type ProgressEvent = {
     category: string;
     dotSize?: number;
     article?: string;
+    significant?: boolean; // ADD THIS LINE
 };
 
 // ==================== CONSTANTS ====================
@@ -28,6 +29,7 @@ const LAYOUT_CONFIG = {
     REVEAL_BIAS: 0.10,
     EPS: 0.002,
     HEADER_SPACE: 260,
+    CONTROL_STRIP_HEIGHT: 40, // NEW - space for toggle and legend
 } as const;
 
 const ANIMATION_CONFIG = {
@@ -88,12 +90,20 @@ function useContainerWidth(ref: React.RefObject<HTMLDivElement | null>) {
             setWidth(Math.max(0, Math.round(w)));
         };
 
+        // Debounce helper
+        let timeoutId: number | null = null;
+        const debouncedUpdate = () => {
+            if (timeoutId) window.clearTimeout(timeoutId);
+            timeoutId = window.setTimeout(updateWidth, 150);
+        };
+
         const rafId = requestAnimationFrame(updateWidth);
-        const ro = new ResizeObserver(() => requestAnimationFrame(updateWidth));
+        const ro = new ResizeObserver(debouncedUpdate);
         ro.observe(el);
 
         return () => {
             cancelAnimationFrame(rafId);
+            if (timeoutId) window.clearTimeout(timeoutId);
             ro.disconnect();
         };
     }, [ref]);
@@ -140,9 +150,7 @@ const styles = `
     position: relative;
     overflow-x: auto;
     overflow-y: visible;
-    border-top: 1px solid #fff;
-    border-bottom: 1px solid #fff;
-    padding: 10px 100px;
+    padding: 20px 100px;
     box-sizing: border-box;
     min-height: 400px;
     outline: none;
@@ -182,7 +190,7 @@ const styles = `
     width: 100%;
 }
 
-.tl-plot { position: relative; }
+.tl-plot { position: relative;}
 .tl-svg:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(255,255,255,.25) inset; border-radius: 6px; }
 
 .tl-header {
@@ -227,13 +235,13 @@ const styles = `
 }
 
 .tl-line--top { background: rgba(255,255,255,0.16); margin-bottom: 14px; }
-.tl-line--bottom { margin-top: 24px; }
+.tl-line--bottom { margin-top: 24px;  margin-bottom: -20px;}
 
 .tl-connector {
     position: absolute;
     right: 0;
     top: 260px;
-    bottom: 0;
+    bottom: -20px;
     width: 1px;
     background: rgba(255,255,255,0.14);
     pointer-events: none;
@@ -267,6 +275,128 @@ const styles = `
     width:9px;height:9px;border-radius:50%;
     border:1px solid rgba(255,255,255,.25);
 }
+
+/* ============ TOGGLE  ============ */
+/* ---------- Toggle ---------- */
+.tl-toggle-wrapper{
+  position:absolute; top:-2px; left:20px; z-index:15; pointer-events:auto;
+}
+.tl-toggle-container{
+  display:flex; align-items:center; gap:18px; background:transparent; border:none; padding:0; cursor:pointer;
+}
+.tl-toggle-label-left,
+.tl-toggle-label-right{
+  font:400 14px/1 'Rajdhani','Rajdhani Fallback',monospace;
+  letter-spacing:.08em; text-transform:uppercase;
+  color:rgba(255,255,255,.35);
+  transition:color .35s cubic-bezier(.22,1,.36,1), transform .35s cubic-bezier(.22,1,.36,1);
+  white-space:nowrap;
+}
+.tl-toggle-label-left:hover,
+.tl-toggle-label-right:hover{ color:rgba(255,255,255,.6); }
+.tl-toggle-label-active{ font-weight:700; color:#fff; transform:scale(1.02); }
+.tl-toggle-label-active.tl-toggle-label-right{
+  color:rgba(255,215,0,1); text-shadow:0 0 12px rgba(255,215,0,.4);
+}
+
+
+/* Register an animatable custom property for the swell scale */
+
+.tl-toggle-track{
+  --track-w:46px;
+  --track-h:24px;
+  --pad:2px;
+  --thumb:18px;
+  /* distance the thumb travels */
+  --tx: calc(var(--track-w) - var(--thumb) - var(--pad)*2);
+  position:relative;
+  width:var(--track-w); height:var(--track-h);
+  border-radius:999px;
+  background:transparent;
+  border:1.5px solid rgba(255,255,255,.25);
+  transition:border-color .35s cubic-bezier(.22,1,.36,1), box-shadow .35s cubic-bezier(.22,1,.36,1);
+}
+
+/* Provide a default for the translate position */
+.tl-toggle-track .tl-toggle-slider{
+  --pos: 0px;     /* updated below when Key is active */
+  --sx: 1;        /* animated during swell */
+}
+
+/* When Key Milestones is active -> thumb sits on right end */
+.tl-toggle-track[data-key-active="true"] .tl-toggle-slider{
+  --pos: var(--tx);
+}
+
+/* OUTER THUMB = position/translate only */
+.tl-toggle-slider{
+  position:absolute; top:var(--pad); left:var(--pad);
+  width:var(--thumb); height:var(--thumb);
+  border-radius:999px;
+  background: transparent;
+  /* smoother, slightly longer, high spring easing */
+  transition: transform 340ms cubic-bezier(.16,1,.3,1);
+  transform: translateX(0);
+  will-change: transform;
+}
+
+/* thumb on RIGHT when Key is active */
+.tl-toggle-track[data-key-active="true"] .tl-toggle-slider{
+  transform: translateX(var(--tx));
+}
+
+/* INNER LAYER = look + swell */
+.tl-toggle-swell{
+  width:100%; height:100%;
+  border-radius:inherit;
+  background: rgba(255,255,255,.95);
+  box-shadow: 0 2px 8px rgba(0,0,0,.15), 0 1px 3px rgba(0,0,0,.1);
+  transform: scaleX(1);
+  will-change: transform;
+}
+
+/* gold when Key is active */
+.tl-toggle-slider[data-gold="true"] .tl-toggle-swell{
+  background: linear-gradient(135deg, rgba(255,215,0,1) 0%, rgba(255,190,0,1) 100%);
+  box-shadow:
+    0 2px 8px rgba(255,215,0,.4),
+    0 1px 3px rgba(255,215,0,.3),
+    inset 0 1px 2px rgba(255,255,255,.3);
+}
+
+/* smoother swell: widen → hold → settle; runs alongside the slide */
+@keyframes tl-swell {
+  0%   { transform: scaleX(1);    }
+  30%  { transform: scaleX(1.32); }  /* widen */
+  50%  { transform: scaleX(1.32); }  /* hold while traveling */
+  100% { transform: scaleX(1);    }  /* settle at end */
+}
+
+/* pick the origin based on travel direction */
+.tl-toggle-slider[data-swell="left"]  .tl-toggle-swell{
+  transform-origin: left center;
+  animation: tl-swell 260ms cubic-bezier(.16,1,.3,1);
+}
+.tl-toggle-slider[data-swell="right"] .tl-toggle-swell{
+  transform-origin: right center;
+  animation: tl-swell 260ms cubic-bezier(.16,1,.3,1);
+}
+
+/* (Optional) subtle track highlight when right side is active */
+.tl-toggle-track[data-key-active="true"]{
+  border-color:rgba(255,215,0,.5);
+  box-shadow:0 0 10px rgba(255,215,0,.15);
+}
+
+/* Responsive */
+@media (max-width:768px){
+  .tl-toggle-track{
+    --track-w:42px; --track-h:22px; --thumb:16px;
+    --tx: calc(var(--track-w) - var(--thumb) - var(--pad)*2);
+  }
+}
+
+/* ============ /TOGGLE ============ */
 
 .tl-path {
     fill: none;
@@ -328,6 +458,27 @@ const styles = `
 .tl-dot-label-exceptional {
     fill: #FFD60A !important; /* Solid gold - works in SVG */
     filter: drop-shadow(0 0 4px rgba(255, 214, 10, 0.6)) drop-shadow(0 0 8px rgba(255, 214, 10, 0.3));
+}
+
+.tl-dot,
+.tl-dot-glow,
+.tl-dot-border,
+.tl-dot-core,
+.tl-dot-exceptional,
+.tl-dot-label,
+.tl-dot-label-exceptional {
+    transition: 
+        r 180ms cubic-bezier(0.34, 1.56, 0.64, 1),
+        opacity 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.tl-dot-hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.tl-dot-visible {
+    opacity: 1;
 }
 
 .tl-year-typo,
@@ -591,6 +742,36 @@ export default function ProgressTimeline({
     const focusedYear = activeYear ?? hoverYear;
     const targetGap = focusedYear >= 0 ? EXPANDED_GAP : BASE_GAP;
     const activeIdx = activeYear ?? hoverYear;
+
+    // --- state (replace your old showAllEvents/dir/dirTimerRef) ---
+    const [showAllEvents, setShowAllEvents] = React.useState(true);
+    const [swell, setSwell] = React.useState<null | 'left' | 'right'>(null);
+    const swellTimerRef = React.useRef<number | null>(null);
+
+    const handleToggle = React.useCallback(() => {
+        const next = !showAllEvents;
+        // direction = where the thumb will travel
+        const direction: 'left' | 'right' = next ? 'left' : 'right';
+
+        setSwell(direction);         // start swell NOW
+        setShowAllEvents(next);      // start slide in the SAME frame
+
+        if (swellTimerRef.current) window.clearTimeout(swellTimerRef.current);
+        // match CSS animation length below (360ms)
+        swellTimerRef.current = window.setTimeout(() => setSwell(null), 380);
+    }, [showAllEvents]);
+
+    React.useEffect(() => {
+        return () => { if (swellTimerRef.current) window.clearTimeout(swellTimerRef.current); };
+    }, []);
+
+
+// keep your visibleEvents memo
+    const visibleEvents = React.useMemo(() => {
+        if (showAllEvents) return events;
+        return events.filter(ev => ev.significant === true || ev.impactType === 'None');
+    }, [events, showAllEvents]);
+
 
     // Path drawing animation
     React.useEffect(() => {
@@ -907,6 +1088,39 @@ export default function ProgressTimeline({
         </div>
     );
 
+    const toggleControl = (
+        <div className="tl-toggle-wrapper">
+            <button
+                className="tl-toggle-container"
+                onClick={handleToggle}
+                aria-pressed={!showAllEvents}
+                aria-label={showAllEvents ? "Show key milestones only" : "Show all events"}
+            >
+    <span className={clsx("tl-toggle-label-left", showAllEvents && "tl-toggle-label-active")}>
+      Show All Events
+    </span>
+
+                <div
+                    className="tl-toggle-track"
+                    data-key-active={!showAllEvents}
+                >
+                    <div
+                        className="tl-toggle-slider"
+                        data-gold={!showAllEvents}
+                        data-swell={swell || undefined}
+                    >
+                        <div className="tl-toggle-swell" />
+                    </div>
+                </div>
+
+                <span className={clsx("tl-toggle-label-right", !showAllEvents && "tl-toggle-label-active")}>
+      Key Milestones
+    </span>
+            </button>
+        </div>
+    );
+
+
     const interactionHint = showHint && (
         <div className="tl-hint">
             💡 Hover years to expand • Click to lock
@@ -946,6 +1160,7 @@ export default function ProgressTimeline({
                     <div className="tl-line tl-line--top" aria-hidden="true"/>
 
                     <div className="tl-plot" style={{position: 'relative', height}}>
+                        {toggleControl}
                         {legend}
                         {infoButton}
                         {interactionHint}
@@ -956,7 +1171,14 @@ export default function ProgressTimeline({
                             height={height}
                             viewBox={`0 0 ${FIXED_TOTAL_WIDTH} ${height}`}
                             preserveAspectRatio="none"
-                            style={{position: 'absolute', inset: 0, overflow: 'visible'}}
+                            style={{
+                                position: 'absolute',
+                                top: '10px',
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                overflow: 'visible'
+                            }}
                             tabIndex={0}
                             role="img"
                             aria-label="Progress timeline, 2016–2026. Hover to expand, click to lock."
@@ -1116,7 +1338,7 @@ export default function ProgressTimeline({
                             />
 
                             {/* Dots */}
-                            {events.map(ev => {
+                            {events.map(ev => {  // CHANGED: Use 'events' not 'visibleEvents'
                                 const yIdx = yearIndex(ev.year);
                                 const yearStart = xAtYear[yIdx];
                                 const yearEnd = yIdx < TOTAL_YEARS - 1 ? xAtYear[yIdx + 1] : xAtYear[yIdx] + animatedWidths[yIdx];
@@ -1129,7 +1351,6 @@ export default function ProgressTimeline({
                                 const dotColor = impactConfig.colors[ev.impactType];
                                 const legendColor = impactConfig.legendColors[ev.impactType];
 
-                                // Use custom size if provided, otherwise use default
                                 const baseSize = ev.dotSize ?? impactConfig.defaultDotSize;
 
                                 const hoveredSize = baseSize * 2;
@@ -1138,8 +1359,12 @@ export default function ProgressTimeline({
                                 const isExceptional = ev.impactType === 'Exceptional';
                                 const isNone = ev.impactType === 'None';
 
+                                // NEW: Check if this dot should be visible based on toggle
+                                const isVisible = showAllEvents || ev.significant === true || ev.impactType === 'None';
+                                const dotOpacity = isVisible ? 1 : 0;
+
                                 return (
-                                    <g key={`${ev.year}.${ev.month}`}>
+                                    <g key={`${ev.year}.${ev.month}`} style={{ opacity: dotOpacity, transition: 'opacity 0.4s cubic-bezier(0.23, 1, 0.32, 1)' }}>
                                         {/* 1. GLOW - behind everything */}
                                         <circle
                                             cx={x} cy={y}
@@ -1193,7 +1418,7 @@ export default function ProgressTimeline({
                                                     r={isHovered ? hoveredSize : baseSize}
                                                     fill="none"
                                                     stroke={dotColor}
-                                                    strokeWidth={2}
+                                                    strokeWidth={3}
                                                     className="tl-dot-border"
                                                     style={{
                                                         filter: isHovered ? `drop-shadow(0 0 8px ${legendColor})` : 'none',
@@ -1221,6 +1446,7 @@ export default function ProgressTimeline({
                                             cx={x} cy={y}
                                             r={12}
                                             fill="transparent"
+                                            style={{ pointerEvents: isVisible ? 'auto' : 'none' }}
                                             onClick={async (e) => {
                                                 if (!inFocusedYear) return;
                                                 e.stopPropagation();
@@ -1248,7 +1474,7 @@ export default function ProgressTimeline({
                                             <text
                                                 x={x}
                                                 y={y - (isHovered ? hoveredSize + 12 : baseSize + 6)}
-                                                className={(isExceptional) ?  "tl-dot-label-exceptional":  "tl-dot-label"}
+                                                className={(isExceptional) ? "tl-dot-label-exceptional" : "tl-dot-label"}
                                                 textAnchor="middle"
                                                 style={{
                                                     fontSize: isHovered ? 17 : 13,

@@ -132,7 +132,7 @@ export default function Collaborations() {
         <section aria-labelledby="collab-title" className="mt-12">
             <Tape label="COLLABORATIONS & COMPANY EXPERIENCE" reverse={false}/>
 
-            <div className="relative bg-[#0C0C0F]">
+            <div className="relative ">
                 <h2 id="collab-title" className="sr-only">
                     Collaborations & Company Experience
                 </h2>

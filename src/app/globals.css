@@ -34,3 +34,9 @@ body {
     letter-spacing: 0.015em;
     font: 700 clamp(2.6rem, 4vw, 4.25rem)/1.05 var(--font-bank);
 }
+
+@property --sx {
+    syntax: '<number>';
+    inherits: false;
+    initial-value: 1;
+}

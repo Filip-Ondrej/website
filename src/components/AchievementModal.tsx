@@ -3,7 +3,7 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 
-// ==================== TYPES ====================
+/* ==================== TYPES ==================== */
 export type AchievementData = {
     id: string;
     title: string;
@@ -28,7 +28,7 @@ type Props = {
     onClose: () => void;
 };
 
-// ==================== COMPONENT ====================
+/* ==================== COMPONENT ==================== */
 export default function AchievementModal({ data, isOpen, onClose }: Props) {
     const backdropRef = React.useRef<HTMLDivElement>(null);
     const containerRef = React.useRef<HTMLDivElement>(null);
@@ -36,7 +36,25 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
     const [activeSection, setActiveSection] = React.useState(0);
     const [isReading, setIsReading] = React.useState(false);
 
-    // Track reading state
+    /* Calculate read time from story text (~225 wpm), stripping most Markdown/noise */
+    function calcReadTimeFromMarkdown(raw: string, wpm = 225): number {
+        /* strip images: ![alt](url) */
+        const noImages = raw.replace(/!\[[^\]]*]\([^)]*\)/g, " ");
+
+        /* strip fenced code blocks: ``` ... ``` */
+        const noCodeBlocks = noImages.replace(/```[\s\S]*?```/g, " ");
+
+        /* strip inline code: `code` */
+        const noInlineCode = noCodeBlocks.replace(/`[^`]*`/g, " ");
+
+        /* collapse punctuation to spaces */
+        const plain = noInlineCode.replace(/[^\w\s]|_/g, " ");
+
+        const words = plain.trim().split(/\s+/).filter(Boolean).length;
+        return Math.max(1, Math.ceil(words / wpm)); // at least 1 minute
+    }
+
+    /* Track reading state */
     React.useEffect(() => {
         if (!isOpen) {
             setIsReading(false);
@@ -66,7 +84,7 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
             if (e.key === 'Escape') onClose();
         };
 
-        // Handle arrow key navigation
+        /* Handle arrow key navigation */
         const handleArrowKeys = (e: KeyboardEvent) => {
             const container = containerRef.current;
             if (!container) return;
@@ -83,6 +101,12 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
         document.addEventListener('keydown', handleEsc);
         document.addEventListener('keydown', handleArrowKeys);
         document.body.style.overflow = 'hidden';
+
+        /* RESET SCROLL TO TOP WHEN MODAL OPENS */
+        const container = containerRef.current;
+        if (container) {
+            container.scrollTop = 0;
+        }
 
         return () => {
             document.removeEventListener('keydown', handleEsc);
@@ -103,7 +127,7 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
             const progress = Math.min(1, scrolled / total);
             setScrollProgress(progress);
 
-            // Determine active section based on scroll position
+            /* Determine active section based on scroll position */
             const sections = [
                 { id: 'hero', index: 0 },
                 { id: 'stakes', index: 1 },
@@ -120,7 +144,7 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     const containerRect = container.getBoundingClientRect();
                     const relativeTop = rect.top - containerRect.top;
 
-                    // Check if we've scrolled past the midpoint of this section
+                    /* Check if we've scrolled past the midpoint of this section */
                     if (relativeTop <= container.clientHeight * 0.5) {
                         current = index;
                     }
@@ -130,14 +154,14 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
             setActiveSection(current);
         };
 
-        // Intersection Observer for reveal animations
+        /* Intersection Observer for reveal animations */
         const observer = new IntersectionObserver(
             (entries) => {
                 entries.forEach((entry) => {
                     if (entry.isIntersecting) {
                         entry.target.classList.add('in-view');
 
-                        // Trigger counter animation for metrics
+                        /* Trigger counter animation for metrics */
                         if (entry.target.classList.contains('metric-badge')) {
                             const el = entry.target as HTMLElement;
                             const finalText = el.dataset.value || el.textContent || '';
@@ -153,7 +177,7 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
         sections.forEach((section) => observer.observe(section));
 
         container.addEventListener('scroll', handleScroll);
-        handleScroll(); // Initial call
+        handleScroll(); /* Initial call */
 
         return () => {
             container.removeEventListener('scroll', handleScroll);
@@ -161,7 +185,7 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
         };
     }, [isOpen]);
 
-    // Animate metric values
+    /* Animate metric values */
     const animateValue = (element: HTMLElement, value: string) => {
         const match = value.match(/(\d+)/);
         if (!match) {
@@ -191,11 +215,10 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
 
     if (!isOpen || !data) return null;
 
-    // Calculate read time
-    const wordCount = data.story.split(/\s+/).length;
-    const readTime = Math.ceil(wordCount / 200);
+    /* Auto-calc read time from the story text */
+    const readTime = calcReadTimeFromMarkdown(data?.story ?? "");
 
-    // Section navigation
+    /* Section navigation */
     const sections = [
         { name: 'Intro', id: 'hero' },
         { name: 'Stakes', id: 'stakes' },
@@ -208,11 +231,11 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
         const container = containerRef.current;
         if (!element || !container) return;
 
-        // Get the height of the sticky progress panel
+        /* Get the height of the sticky progress panel*/
         const progressPanel = container.querySelector('.progress-system') as HTMLElement;
         const panelHeight = progressPanel?.offsetHeight || 0;
 
-        // Calculate position accounting for the sticky panel
+        /* Calculate position accounting for the sticky panel*/
         const elementPosition = element.offsetTop;
         const offsetPosition = elementPosition - panelHeight;
 
@@ -388,7 +411,7 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                             p: ({ children, ...props }) => {
                                 const text = children?.toString() || '';
 
-                                // Handle inline images
+                                /* Handle inline images*/
                                 const imageMatch = text.match(/!\[IMAGE-(\d+)\]/);
                                 if (imageMatch) {
                                     const idx = parseInt(imageMatch[1]);
@@ -412,6 +435,15 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
 
                                 return <p className="story-p" {...props}>{children}</p>;
                             },
+                            ul: ({ children, ...props }) => (
+                                <ul className="story-list" {...props}>{children}</ul>
+                            ),
+                            ol: ({ children, ...props }) => (
+                                <ol className="story-list ordered" {...props}>{children}</ol>
+                            ),
+                            li: ({ children, ...props }) => (
+                                <li className="story-li" {...props}>{children}</li>
+                            ),
                             blockquote: ({ children, ...props }) => (
                                 <blockquote className="story-quote" {...props}>
                                     <span className="quote-mark">|</span>
@@ -496,13 +528,12 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     to { transform: translateX(100%); }
                 }
 
-                /* CLOSE BUTTON - OLD ONE REMOVED */
-
-                /* MODAL CONTAINER */
+                /* MODAL CONTAINER - LOCKED ASPECT RATIO WITH VIEWPORT CONSTRAINT */
                 .achievement-modal-container {
-                    width: 85%;
+                    width: min(85vw, 85vh);
+                    height: min(85vw, 85vh);
                     max-width: 900px;
-                    height: 85vh;
+                    max-height: 900px;
                     background: #000000;
                     border: 1px solid rgba(255, 255, 255, 0.1);
                     overflow-y: auto;
@@ -769,7 +800,6 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                 .scroll-indicator {
                     position: absolute;
                     bottom: -15px;
-                    /* FIXED CENTERING */
                     left: 0;
                     right: 0;
                     margin: 0 auto;
@@ -909,7 +939,7 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     border: 1px solid rgba(255, 255, 255, 0.15);
                     position: relative;
                     overflow: hidden;
-                    transition: all 0.3s ease;
+                    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
                 }
 
                 .stake-card::before {
@@ -921,20 +951,40 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     height: 1px;
                     background: linear-gradient(90deg, 
                         transparent 0%,
-                        rgba(255, 255, 255, 0.6) 50%,
+                        rgba(255, 215, 0, 0.8) 50%,
                         transparent 100%
                     );
-                    transition: left 0.5s ease;
+                    transition: left 0.6s ease;
+                }
+
+                .stake-card::after {
+                    content: '';
+                    position: absolute;
+                    inset: -2px;
+                    border-radius: inherit;
+                    background: linear-gradient(135deg, 
+                        rgba(255, 215, 0, 0) 0%,
+                        rgba(255, 215, 0, 0.15) 50%,
+                        rgba(255, 215, 0, 0) 100%
+                    );
+                    opacity: 0;
+                    transition: opacity 0.4s ease;
+                    pointer-events: none;
+                }
+
+                .stake-card:hover {
+                    background: rgba(255, 255, 255, 0.08);
+                    border-color: rgba(255, 215, 0, 0.6);
+                    transform: translateY(-4px) scale(1.02);
+                    box-shadow: 0 8px 32px rgba(255, 215, 0, 0.2);
                 }
 
                 .stake-card:hover::before {
                     left: 100%;
                 }
 
-                .stake-card:hover {
-                    background: rgba(255, 255, 255, 0.08);
-                    border-color: rgba(255, 255, 255, 0.3);
-                    transform: translateY(-2px);
+                .stake-card:hover::after {
+                    opacity: 1;
                 }
 
                 .stake-header {
@@ -956,6 +1006,13 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     width: 100%;
                     height: 100%;
                     stroke: rgba(255, 255, 255, 0.6);
+                    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+                }
+
+                .stake-card:hover .stake-icon svg {
+                    stroke: rgba(255, 215, 0, 0.95);
+                    filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.6));
+                    transform: scale(1.1);
                 }
 
                 .stake-label {
@@ -963,12 +1020,26 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     letter-spacing: 0.2em;
                     text-transform: uppercase;
                     color: rgba(255, 255, 255, 0.7);
+                    transition: all 0.4s ease;
+                }
+
+                .stake-card:hover .stake-label {
+                    color: rgba(255, 215, 0, 0.95);
+                    text-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
                 }
 
                 .stake-card p {
                     font: 400 16px/1.6 'Rajdhani', monospace;
                     color: rgba(255, 255, 255, 0.9);
                     margin: 0;
+                    transition: color 0.4s ease, text-shadow 0.4s ease;
+                }
+
+                .stake-card:hover p {
+                    font-weight: 600;
+                    color: rgba(255, 255, 255, 1);
+                    text-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
+                    letter-spacing: -0.003em;
                 }
 
                 .stakes-divider {
@@ -990,25 +1061,20 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
 
                 /* METRICS */
                 .metrics-section {
-                    padding: 20px 60px;
+                    padding: 20px 60px 40px 60px;
                     background: #000000;
                     position: relative;
                     overflow: hidden;
                 }
 
-                .metrics-section::before {
+                .metrics-section::after {
                     content: '';
                     position: absolute;
-                    top: 50%;
-                    left: 50%;
-                    transform: translate(-50%, -50%);
-                    width: 200%;
+                    bottom: 0;
+                    left: 0;
+                    right: 0;
                     height: 1px;
-                    background: linear-gradient(90deg,
-                        transparent 0%,
-                        rgba(255, 255, 255, 0.05) 50%,
-                        transparent 100%
-                    );
+                    background: rgba(255, 255, 255, 0.05);
                 }
 
                 .metrics-grid {
@@ -1043,28 +1109,26 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
 
                 /* STORY CONTENT */
                 .story-content {
-                    padding: 20px 60px;
+                    padding: 50px 0;
                     max-width: 900px;
                     margin: 0 auto;
                 }
 
                 .story-content .section-header {
+                    position: relative;
                     display: flex;
                     align-items: center;
-                    justify-content: space-between;
+                    gap: 16px;
                     margin: 0 0 50px 0;
-                    padding: 0 0 16px 0;
-                    max-width: 100%;
-                    width: 100%;
-                    position: relative;
+                    padding: 0 60px 16px 60px;
                 }
 
                 .story-content .section-header::after {
                     content: '';
                     position: absolute;
                     bottom: 0;
-                    left: -10px;
-                    right: -10px;
+                    left: 50px;
+                    right: 50px;
                     height: 1px;
                     background: rgba(255, 255, 255, 0.2);
                 }
@@ -1076,6 +1140,10 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                 }
 
                 .story-content .section-header .read-time-wrapper {
+                    position: absolute;
+                    right: 60px;
+                    top: 50%;
+                    transform: translateY(-50%);
                     display: flex;
                     align-items: center;
                     gap: 6px;
@@ -1091,13 +1159,23 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     flex-shrink: 0;
                 }
 
+                .story-h2,
+                .story-h3,
+                .story-p,
+                .story-image,
+                .story-quote,
+                .story-list {
+                    max-width: 550px;
+                    margin-left: auto;
+                    margin-right: auto;
+                }
+                
                 .story-h2 {
                     font: 700 clamp(28px, 3.5vw, 34px)/1.2 'Rajdhani', monospace;
                     color: #FFFFFF;
-                    margin: 60px 0 24px 0;
+                    margin: 60px auto 24px auto;
                     position: relative;
                     padding-left: 24px;
-                    max-width: 680px;
                 }
 
                 .h2-marker {
@@ -1120,10 +1198,9 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                 .story-h3 {
                     font: 600 clamp(20px, 2.5vw, 24px)/1.3 'Rajdhani', monospace;
                     color: rgba(255, 255, 255, 0.9);
-                    margin: 40px 0 16px 0;
+                    margin: 40px auto 16px auto;
                     position: relative;
                     padding-left: 16px;
-                    max-width: 680px;
                 }
 
                 .story-h3::before {
@@ -1136,8 +1213,7 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                 .story-p {
                     font: 400 17px/1.7 'Rajdhani', monospace;
                     color: rgba(255, 255, 255, 0.75);
-                    margin: 20px 0;
-                    max-width: 680px;
+                    margin: 20px auto;
                 }
 
                 .story-emphasis {
@@ -1161,16 +1237,38 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                 .story-emphasis:hover::after {
                     transform: scaleX(1);
                 }
+                
+                .story-list {
+                    margin: 16px auto;
+                    padding-left: 1.25rem;
+                    list-style-position: outside;
+                }
+                
+                .story-list.ordered { 
+                    list-style-type: decimal; 
+                }
+                
+                .story-list:not(.ordered) { 
+                    list-style-type: disc; 
+                }
 
-                /* Story images */
+                .story-li {
+                    margin: 6px 0;
+                    color: rgba(255,255,255,0.75);
+                    font: 400 17px/1.7 'Rajdhani', monospace;
+                }
+
+                .story-li > ul,
+                .story-li > ol {
+                    margin-top: 8px;
+                    margin-bottom: 8px;
+                }
+                
                 .story-image {
-                    margin: 50px 0;
-                    margin-left: -30px;
-                    margin-right: -30px;
+                    margin: 50px auto;
                     opacity: 0;
                     transform: translateY(30px);
                     transition: all 0.6s ease;
-                    max-width: calc(680px + 60px);
                 }
 
                 .story-image.in-view {
@@ -1213,14 +1311,12 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     background: rgba(0, 0, 0, 0.5);
                 }
 
-                /* Pull quotes */
                 .story-quote {
-                    margin: 50px 0;
+                    margin: 50px auto;
                     padding: 32px;
                     position: relative;
                     background: transparent;
                     border: 1px solid rgba(255, 255, 255, 0.1);
-                    max-width: 680px;
                 }
 
                 .quote-mark {
@@ -1242,9 +1338,8 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     position: relative;
                 }
 
-                /* INSIGHT SECTION */
                 .insight-section {
-                    padding: 60px 60px;
+                    padding: 50px 60px;
                     background: transparent;
                     border-top: 1px solid rgba(255, 255, 255, 0.05);
                     text-align: center;
@@ -1271,21 +1366,19 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     max-width: 600px;
                     position: relative;
                 }
-                /* === Align Section 03 header with the others === */
+                
                 #insight .section-header {
-                    /* remove the extra inner left/right padding so we don't double it */
                     padding: 0 0 16px 0;
-                    max-width: 900px;          /* keep same content width */
-                    margin: 0 auto 50px;       /* center + spacing */
+                    max-width: 900px;
+                    margin: 0 auto 50px;
                     position: relative;
                 }
 
-                /* Make the underline start at the parent's padding edge */
                 #insight .section-header::after {
-                    left: -10px;    /* was inheriting 60px from the base rule */
-                    right: -10px;   /* match both sides */
+                    left: -10px;
+                    right: -10px;
                 }
-                /* FOOTER */
+                
                 .footer-section {
                     padding: 40px 60px;
                     border-top: 1px solid rgba(255, 255, 255, 0.05);
@@ -1315,7 +1408,6 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     border-color: rgba(255, 255, 255, 0.3);
                 }
 
-                /* SCROLLBAR */
                 .achievement-modal-container::-webkit-scrollbar {
                     width: 6px;
                 }
@@ -1333,7 +1425,6 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     background: rgba(255, 255, 255, 0.3);
                 }
 
-                /* Smooth reveal animations */
                 .story-section {
                     opacity: 0;
                     transform: translateY(40px);
@@ -1345,11 +1436,12 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     transform: translateY(0);
                 }
 
-                /* RESPONSIVE */
                 @media (max-width: 768px) {
                     .achievement-modal-container {
-                        width: 100%;
-                        height: 100vh;
+                        width: min(95vw, 95vh);
+                        height: min(95vw, 95vh);
+                        max-width: none;
+                        max-height: none;
                     }
 
                     .section-dots {
@@ -1361,32 +1453,25 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                         font-size: 9px;
                     }
 
-                    .hero-content,
-                    .stakes-section,
-                    .story-content,
-                    .insight-section {
+                    .hero-content {
                         padding: 40px 24px;
                     }
 
                     .stakes-container {
                         grid-template-columns: 1fr;
                         gap: 24px;
+                        padding: 0 24px;
                     }
 
                     .stakes-divider {
                         transform: rotate(90deg);
                     }
 
-                    .story-image {
-                        margin: 30px -24px;
-                    }
-
                     .section-header {
-                        margin-bottom: 24px;
+                        padding: 0 24px 16px 24px;
                     }
                 }
 
-                /* Performance optimizations */
                 @media (prefers-reduced-motion: reduce) {
                     *,
                     *::before,
