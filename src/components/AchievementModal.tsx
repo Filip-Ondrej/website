@@ -701,8 +701,8 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                 /* HERO SECTION */
                 .hero-section {
                     position: relative;
-                    height: 70vh;
-                    min-height: 500px;
+                    width: 100%;
+                    aspect-ratio: 4 / 3; /* FIXED: Always 4:3 ratio */
                     display: flex;
                     align-items: flex-end;
                     overflow: hidden;
@@ -713,7 +713,8 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     inset: 0;
                     width: 100%;
                     height: 100%;
-                    object-fit: cover;
+                    object-fit: cover; /* Keeps this so image fills the fixed container */
+                    object-position: center; /* Centers the image within the 4:3 container */
                 }
 
                 .hero-overlay {
@@ -1443,7 +1444,9 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                         max-width: none;
                         max-height: none;
                     }
-
+                    .hero-section {
+                        aspect-ratio: 3 / 4; /* CHANGED: Taller ratio for mobile (portrait) */
+                    }
                     .section-dots {
                         gap: 20px;
                         padding: 16px;

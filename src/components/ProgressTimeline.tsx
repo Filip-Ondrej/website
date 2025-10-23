@@ -24,7 +24,7 @@ const LAYOUT_CONFIG = {
     BASE_GAP: 2,
     EXPANDED_GAP: 5,
     PAD_TOP: 16,
-    PAD_BOTTOM: 32,
+    PAD_BOTTOM: 40,
     LEVEL_TOP: 6,
     REVEAL_BIAS: 0.10,
     EPS: 0.002,
@@ -144,6 +144,137 @@ function useHintVisibility() {
     return {showHint, hasEverInteracted, onInteraction, toggleHint};
 }
 
+
+// NEW: Scroll-driven typewriter with pause detection
+// NEW: Scroll-driven typewriter with pause detection
+function useScrollTypewriter(ref: React.RefObject<HTMLDivElement | null>) {
+    const [scrollProgress, setScrollProgress] = React.useState(0);
+    const [isPaused, setIsPaused] = React.useState(false);
+    const pauseTimerRef = React.useRef<number | null>(null);
+    const lastProgressRef = React.useRef(0);
+    const lastChangeTimeRef = React.useRef(Date.now());
+
+    React.useEffect(() => {
+        const el = ref.current;
+        if (!el) return;
+
+        let rafId: number | null = null;
+
+        const handleScroll = () => {
+            if (rafId) return;
+
+            rafId = requestAnimationFrame(() => {
+                const rect = el.getBoundingClientRect();
+                const windowHeight = window.innerHeight;
+
+                const start = windowHeight - 150;
+                const end = windowHeight * 0.4;
+
+                const progress = 1 - Math.max(0, Math.min(1, (rect.top - end) / (start - end)));
+                setScrollProgress(progress);
+
+                // More sensitive change detection
+                const progressDiff = Math.abs(progress - lastProgressRef.current);
+
+                if (progressDiff > 0.005) {
+                    // Progress changed significantly - user is scrolling
+                    lastChangeTimeRef.current = Date.now();
+                    setIsPaused(false);
+                    if (pauseTimerRef.current) {
+                        clearTimeout(pauseTimerRef.current);
+                        pauseTimerRef.current = null;
+                    }
+                } else if (progress > 0.01 && progress < 0.99) {
+                    // Progress hasn't changed and we're mid-animation
+                    const timeSinceChange = Date.now() - lastChangeTimeRef.current;
+
+                    if (timeSinceChange > 500 && !isPaused) {
+                        // Been still for 500ms - start blinking
+                        setIsPaused(true);
+                    }
+                }
+
+                lastProgressRef.current = progress;
+                rafId = null;
+            });
+        };
+
+        handleScroll();
+        window.addEventListener('scroll', handleScroll, {passive: true});
+        window.addEventListener('resize', handleScroll, {passive: true});
+
+        // Check pause state periodically
+        const intervalId = setInterval(() => {
+            const timeSinceChange = Date.now() - lastChangeTimeRef.current;
+            const progress = lastProgressRef.current;
+
+            if (timeSinceChange > 500 && progress > 0.01 && progress < 0.99 && !isPaused) {
+                setIsPaused(true);
+            }
+        }, 100);
+
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+            window.removeEventListener('resize', handleScroll);
+            clearInterval(intervalId);
+            if (rafId) cancelAnimationFrame(rafId);
+            if (pauseTimerRef.current) clearTimeout(pauseTimerRef.current);
+        };
+    }, [isPaused]);
+
+    return {scrollProgress, isPaused};
+}
+// NEW: Time-based typewriter that "chases" scroll target
+function useTimedTypewriter(targetCharCount: number, charDelay: number = 50) {
+    const [actualCharCount, setActualCharCount] = React.useState(0);
+    const lastTargetRef = React.useRef(0);
+    const intervalRef = React.useRef<number | null>(null);
+
+    React.useEffect(() => {
+        if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+        }
+
+        if (actualCharCount === targetCharCount) {
+            lastTargetRef.current = targetCharCount;
+            return;
+        }
+
+        // DETECT DIRECTION
+        const isTyping = targetCharCount > actualCharCount;
+        const isUntyping = targetCharCount < actualCharCount;
+
+        // Untyping is 2x faster
+        const delay = isUntyping ? charDelay / 2 : charDelay;
+
+        intervalRef.current = window.setInterval(() => {
+            setActualCharCount(current => {
+                // Moving toward target
+                if (isTyping && current >= targetCharCount) {
+                    if (intervalRef.current) clearInterval(intervalRef.current);
+                    return targetCharCount;
+                }
+                if (isUntyping && current <= targetCharCount) {
+                    if (intervalRef.current) clearInterval(intervalRef.current);
+                    return targetCharCount;
+                }
+
+                // Step one character in the right direction
+                return isTyping ? current + 1 : current - 1;
+            });
+        }, delay);
+
+        lastTargetRef.current = targetCharCount;
+
+        return () => {
+            if (intervalRef.current) clearInterval(intervalRef.current);
+        };
+    }, [targetCharCount, charDelay, actualCharCount]);
+
+    return actualCharCount;
+}
+
 // ==================== STYLES ====================
 const styles = `
 .tl-wrap {
@@ -191,7 +322,6 @@ const styles = `
 }
 
 .tl-plot { position: relative;}
-.tl-svg:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(255,255,255,.25) inset; border-radius: 6px; }
 
 .tl-header {
     position: relative;
@@ -201,7 +331,7 @@ const styles = `
 
 .tl-header-spine {
     position: absolute;
-    top: 0;
+    top: -100vh; /* CHANGED: Extend upward */
     bottom: 0;
     width: 1px;
     background: rgba(255,255,255,0.16);
@@ -218,6 +348,57 @@ const styles = `
     text-transform: uppercase;
     color: rgba(255,255,255,0.88);
     margin-top: -0.1em;
+}
+/* NEW: Typewriter animation */
+.tl-header-title-line {
+    display: block;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.tl-header-title-char {
+    display: inline-block;
+    opacity: 0;
+}
+
+.tl-header-title-char--visible {
+    opacity: 1;
+    /* No transition - instant appearance */
+}
+
+/* Cursor - only visible at the current typing position */
+.tl-header-cursor {
+    display: inline-block;
+    width: 3px;
+    height: 0.9em;
+    background: rgba(255, 255, 255, 0.9);
+    margin-left: 4px;
+    vertical-align: middle;
+    opacity: 0;
+}
+
+.tl-header-cursor--typing {
+    opacity: 1;
+    animation: none; /* Solid while typing */
+}
+
+.tl-header-cursor--paused {
+    opacity: 1;
+    animation: tlCursorBlink 0.8s step-end infinite;
+}
+
+.tl-header-cursor--complete {
+    opacity: 1;
+    animation: tlCursorBlink 0.8s step-end 4, tlCursorFadeOut 0.6s ease-out 2.5s forwards;
+}
+
+@keyframes tlCursorBlink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+}
+
+@keyframes tlCursorFadeOut {
+    to { opacity: 0; }
 }
 
 .tl-header-emphasis {
@@ -601,7 +782,7 @@ const styles = `
         opacity: 0.5;
     }
     50% {
-        opacity: 0.85;
+        opacity: 0.95;
     }
 }
 
@@ -688,7 +869,7 @@ export default function ProgressTimeline({
                                              events = filipRealEvents,
                                              height = 425,
                                              baseYearWidth,
-                                             expandedFactor = 3.6,
+                                             expandedFactor = 4.2,
                                              className,
                                          }: Props) {
     const {
@@ -704,6 +885,7 @@ export default function ProgressTimeline({
     } = LAYOUT_CONFIG;
 
     const containerRef = React.useRef<HTMLDivElement>(null);
+    const headerRef = React.useRef<HTMLDivElement>(null);
     const widthsRef = React.useRef<Float64Array>(new Float64Array(TOTAL_YEARS));
     const gapRef = React.useRef<number>(BASE_GAP);
     const hoverRAF = React.useRef<number | null>(null);
@@ -727,6 +909,9 @@ export default function ProgressTimeline({
     const [hoverYear, setHoverYear] = React.useState<number>(-1);
     const [activeYear, setActiveYear] = React.useState<number | null>(null);
     const [selectedEvent, setSelectedEvent] = React.useState<ProgressEvent | null>(null);
+    const [hoveredDot, setHoveredDot] = React.useState<{year: number, month: number} | null>(null);
+    const hoverDelayRef = React.useRef<number | null>(null);
+
     const [animatedWidths, setAnimatedWidths] = React.useState<number[]>(
         () => Array.from({length: TOTAL_YEARS}, () => effectiveBaseYearWidth)
     );
@@ -738,6 +923,26 @@ export default function ProgressTimeline({
     const TEASER_EVENT_LEVEL = 4.8; // Actual level of Sydney achievement
 
     const {showHint, onInteraction, toggleHint} = useHintVisibility();
+    const titleLines = ['Every Lesson.', 'Every Pivot.', 'Every Win.'];
+    const {scrollProgress: typewriterProgress, isPaused} = useScrollTypewriter(headerRef);
+
+// Calculate TARGET characters based on scroll progress
+    const totalChars = titleLines.reduce((sum, line) => sum + line.length, 0);
+    const targetCharCount = Math.floor(typewriterProgress * totalChars);
+
+// ACTUAL characters typed (chases target with time delay)
+    const actualCharCount = useTimedTypewriter(targetCharCount, 50); // 50ms per character
+
+    const visibleChars = React.useMemo(() => {
+        let remaining = actualCharCount; // CHANGED: Use actualCharCount instead
+        return titleLines.map(line => {
+            const lineChars = Math.min(line.length, Math.max(0, remaining));
+            remaining -= line.length;
+            return lineChars;
+        });
+    }, [actualCharCount, titleLines]); // CHANGED: Depend on actualCharCount
+
+    const complete = typewriterProgress >= 0.99;
 
     const focusedYear = activeYear ?? hoverYear;
     const targetGap = focusedYear >= 0 ? EXPANDED_GAP : BASE_GAP;
@@ -762,9 +967,19 @@ export default function ProgressTimeline({
     }, [showAllEvents]);
 
     React.useEffect(() => {
-        return () => { if (swellTimerRef.current) window.clearTimeout(swellTimerRef.current); };
+        return () => {
+            if (swellTimerRef.current) window.clearTimeout(swellTimerRef.current);
+        };
     }, []);
 
+
+    React.useEffect(() => {
+        return () => {
+            if (hoverDelayRef.current) {
+                clearTimeout(hoverDelayRef.current);
+            }
+        };
+    }, []);
 
 // keep your visibleEvents memo
     const visibleEvents = React.useMemo(() => {
@@ -903,6 +1118,14 @@ export default function ProgressTimeline({
         pt.x = e.clientX;
         pt.y = e.clientY;
         const svgP = pt.matrixTransform(svg.getScreenCTM()?.inverse());
+
+        // NEW: Ignore hover if cursor is in top 80px of graph
+        const minHoverY = 25; // Adjust this value - higher = less sensitive area at top
+        if (svgP.y < minHoverY) {
+            // Clear hover when in top area
+            setHoverYear(-1);
+            return;
+        }
 
         pendingHoverX.current = svgP.x;
 
@@ -1109,7 +1332,7 @@ export default function ProgressTimeline({
                         data-gold={!showAllEvents}
                         data-swell={swell || undefined}
                     >
-                        <div className="tl-toggle-swell" />
+                        <div className="tl-toggle-swell"/>
                     </div>
                 </div>
 
@@ -1148,12 +1371,53 @@ export default function ProgressTimeline({
                 aria-label="Progress timeline"
             >
                 <div className="tl-rail">
-                    <div className="tl-header" style={{height: HEADER_SPACE}} aria-hidden="true">
+                    <div className="tl-header" style={{height: HEADER_SPACE}} aria-hidden="true" ref={headerRef}>
                         <div className="tl-header-spine"/>
                         <h1 className="tl-header-title">
-                            Every Lesson.<br/>
-                            Every Pivot.<br/>
-                            <span className="tl-header-emphasis tl-header-gold">Every Win.</span>
+                            {titleLines.map((line, lineIdx) => {
+                                const chars = line.split('');
+                                const visibleCount = visibleChars[lineIdx];
+
+                                const isActivelyTyping = visibleCount > 0 && visibleCount < chars.length;
+                                const isLineComplete = visibleCount >= chars.length;
+                                const isFinalLine = lineIdx === titleLines.length - 1;
+
+                                return (
+                                    <span
+                                        key={lineIdx}
+                                        className={clsx(
+                                            'tl-header-title-line',
+                                            lineIdx === 2 && 'tl-header-emphasis tl-header-gold'
+                                        )}
+                                    >
+                {chars.map((char, charIdx) => (
+                    <React.Fragment key={charIdx}>
+                        <span
+                            className={clsx(
+                                'tl-header-title-char',
+                                charIdx < visibleCount && 'tl-header-title-char--visible'
+                            )}
+                        >
+                            {char === ' ' ? '\u00A0' : char}
+                        </span>
+                        {/* Show cursor RIGHT AFTER this character if it's the last visible one */}
+                        {isActivelyTyping && charIdx === visibleCount - 1 && (
+                            <span
+                                className={clsx(
+                                    'tl-header-cursor',
+                                    isPaused ? 'tl-header-cursor--paused' : 'tl-header-cursor--typing'
+                                )}
+                            />
+                        )}
+                    </React.Fragment>
+                ))}
+                                        {/* Cursor at end when line complete (only on final line) */}
+                                        {isLineComplete && isFinalLine && complete && (
+                                            <span className="tl-header-cursor tl-header-cursor--complete" />
+                                        )}
+            </span>
+                                );
+                            })}
                         </h1>
                     </div>
 
@@ -1178,14 +1442,6 @@ export default function ProgressTimeline({
                                 right: 0,
                                 bottom: 0,
                                 overflow: 'visible'
-                            }}
-                            tabIndex={0}
-                            role="img"
-                            aria-label="Progress timeline, 2016–2026. Hover to expand, click to lock."
-                            onKeyDown={(e) => {
-                                if (e.key === 'ArrowRight') setHoverYear((y) => Math.min(10, (y < 0 ? 0 : y + 1)));
-                                if (e.key === 'ArrowLeft') setHoverYear((y) => Math.max(0, (y < 0 ? 0 : y - 1)));
-                                if (e.key === 'Enter' || e.key === ' ') setActiveYear((y) => (y === hoverYear ? null : hoverYear));
                             }}
                             onMouseMove={handleMouseMove}
                             onMouseLeave={handleMouseLeave}
@@ -1337,8 +1593,8 @@ export default function ProgressTimeline({
                                 }}
                             />
 
-                            {/* Dots */}
-                            {events.map(ev => {  // CHANGED: Use 'events' not 'visibleEvents'
+                            {/* PASS 1: Dots + Hit Areas */}
+                            {events.map(ev => {
                                 const yIdx = yearIndex(ev.year);
                                 const yearStart = xAtYear[yIdx];
                                 const yearEnd = yIdx < TOTAL_YEARS - 1 ? xAtYear[yIdx + 1] : xAtYear[yIdx] + animatedWidths[yIdx];
@@ -1350,52 +1606,39 @@ export default function ProgressTimeline({
                                 const inFocusedYear = focusedYear === yIdx;
                                 const dotColor = impactConfig.colors[ev.impactType];
                                 const legendColor = impactConfig.legendColors[ev.impactType];
-
                                 const baseSize = ev.dotSize ?? impactConfig.defaultDotSize;
-
                                 const hoveredSize = baseSize * 2;
-                                const isHovered = inFocusedYear && selectedEvent?.year === ev.year && selectedEvent.month === ev.month;
-
+                                const isHovered = inFocusedYear && hoveredDot?.year === ev.year && hoveredDot?.month === ev.month;
                                 const isExceptional = ev.impactType === 'Exceptional';
                                 const isNone = ev.impactType === 'None';
-
-                                // NEW: Check if this dot should be visible based on toggle
                                 const isVisible = showAllEvents || ev.significant === true || ev.impactType === 'None';
                                 const dotOpacity = isVisible ? 1 : 0;
 
                                 return (
-                                    <g key={`${ev.year}.${ev.month}`} style={{ opacity: dotOpacity, transition: 'opacity 0.4s cubic-bezier(0.23, 1, 0.32, 1)' }}>
-                                        {/* 1. GLOW - behind everything */}
+                                    <g key={`dot-${ev.year}.${ev.month}`} style={{ opacity: dotOpacity, transition: 'opacity 0.4s cubic-bezier(0.23, 1, 0.32, 1)' }}>
+                                        {/* 1. GLOW */}
                                         <circle
                                             cx={x} cy={y}
                                             r={hoveredSize + 6}
                                             className="tl-dot-glow"
                                             style={{
                                                 fill: legendColor,
-                                                opacity: isNone
-                                                    ? 0
-                                                    : isExceptional
-                                                        ? (isHovered ? 0.6 : 0.3)
-                                                        : (isHovered ? 0.6 : 0),
+                                                opacity: isNone ? 0 : isExceptional ? (isHovered ? 0.6 : 0.3) : (isHovered ? 0.6 : 0),
                                             }}
                                             pointerEvents="none"
                                         />
 
                                         {/* 2. DOT RENDERING */}
                                         {isNone ? (
-                                            /* NONE: Simple white circle */
                                             <circle
                                                 cx={x} cy={y}
                                                 r={isHovered ? hoveredSize : baseSize}
                                                 fill="#FFFFFF"
                                                 className="tl-dot"
-                                                style={{
-                                                    transition: 'r 180ms cubic-bezier(0.34, 1.56, 0.64, 1)'
-                                                }}
+                                                style={{ transition: 'r 180ms cubic-bezier(0.34, 1.56, 0.64, 1)' }}
                                                 pointerEvents="none"
                                             />
                                         ) : isExceptional ? (
-                                            /* EXCEPTIONAL: Full gold fill */
                                             <circle
                                                 cx={x} cy={y}
                                                 r={isHovered ? hoveredSize : baseSize}
@@ -1410,9 +1653,7 @@ export default function ProgressTimeline({
                                                 pointerEvents="none"
                                             />
                                         ) : (
-                                            /* REGULAR: Colored border plus white core (NO GAP) */
                                             <>
-                                                {/* Outer border - same size as other dots */}
                                                 <circle
                                                     cx={x} cy={y}
                                                     r={isHovered ? hoveredSize : baseSize}
@@ -1426,16 +1667,12 @@ export default function ProgressTimeline({
                                                     }}
                                                     pointerEvents="none"
                                                 />
-
-                                                {/* Inner white core - accounting for stroke width, no gap */}
                                                 <circle
                                                     cx={x} cy={y}
                                                     r={(isHovered ? hoveredSize : baseSize) - 1}
                                                     fill="#fff"
                                                     className="tl-dot-core"
-                                                    style={{
-                                                        transition: 'r 180ms cubic-bezier(0.34, 1.56, 0.64, 1)'
-                                                    }}
+                                                    style={{ transition: 'r 180ms cubic-bezier(0.34, 1.56, 0.64, 1)' }}
                                                     pointerEvents="none"
                                                 />
                                             </>
@@ -1446,45 +1683,81 @@ export default function ProgressTimeline({
                                             cx={x} cy={y}
                                             r={12}
                                             fill="transparent"
-                                            style={{ pointerEvents: isVisible ? 'auto' : 'none' }}
+                                            style={{pointerEvents: isVisible ? 'auto' : 'none'}}
                                             onClick={async (e) => {
                                                 if (!inFocusedYear) return;
                                                 e.stopPropagation();
-
-                                                // NEW: If event has article, load and show modal
                                                 if (ev.article) {
                                                     const data = await loadAchievement(ev.article);
                                                     setModalData(data);
                                                     setIsModalOpen(true);
                                                 }
-
                                                 setSelectedEvent(prev => (prev?.year === ev.year && prev.month === ev.month ? null : ev));
                                                 setActiveYear(null);
                                             }}
                                             onMouseEnter={() => {
-                                                if (inFocusedYear) setSelectedEvent(ev);
+                                                if (!inFocusedYear) return;
+                                                if (hoverDelayRef.current) clearTimeout(hoverDelayRef.current);
+                                                hoverDelayRef.current = window.setTimeout(() => {
+                                                    setHoveredDot({year: ev.year, month: ev.month});
+                                                    setSelectedEvent(ev);
+                                                }, 150);
                                             }}
                                             onMouseLeave={() => {
-                                                if (inFocusedYear) setSelectedEvent(null);
+                                                if (!inFocusedYear) return;
+                                                if (hoverDelayRef.current) {
+                                                    clearTimeout(hoverDelayRef.current);
+                                                    hoverDelayRef.current = null;
+                                                }
+                                                setHoveredDot(null);
+                                                setSelectedEvent(null);
                                             }}
                                         />
-
-                                        {/* 4. LABEL */}
-                                        {inFocusedYear && ev.category && (
-                                            <text
-                                                x={x}
-                                                y={y - (isHovered ? hoveredSize + 12 : baseSize + 6)}
-                                                className={(isExceptional) ? "tl-dot-label-exceptional" : "tl-dot-label"}
-                                                textAnchor="middle"
-                                                style={{
-                                                    fontSize: isHovered ? 17 : 13,
-
-                                                }}
-                                            >
-                                                {ev.category}
-                                            </text>
-                                        )}
                                     </g>
+                                );
+                            })}
+
+                            {/* PASS 2: Labels (render on top) */}
+                            {events.map(ev => {
+                                const yIdx = yearIndex(ev.year);
+                                const yearStart = xAtYear[yIdx];
+                                const yearEnd = yIdx < TOTAL_YEARS - 1 ? xAtYear[yIdx + 1] : xAtYear[yIdx] + animatedWidths[yIdx];
+                                const span = yearEnd - yearStart;
+                                const t = (ev.month - 1) / 12;
+                                const x = yearStart + t * span;
+                                const y = yOf(ev.level);
+
+                                const inFocusedYear = focusedYear === yIdx;
+                                const baseSize = ev.dotSize ?? impactConfig.defaultDotSize;
+                                const hoveredSize = baseSize * 2;
+                                const isHovered = inFocusedYear && hoveredDot?.year === ev.year && hoveredDot?.month === ev.month;
+                                const isExceptional = ev.impactType === 'Exceptional';
+
+                                const isVisible = showAllEvents || ev.significant === true || ev.impactType === 'None';
+                                if (!inFocusedYear || !ev.category || !isVisible) return null;
+
+                                return (
+                                    <text
+                                        key={`label-${ev.year}.${ev.month}`}
+                                        x={x}
+                                        y={(() => {
+                                            const dotsInYear = eventsByYear.get(yIdx) || [];
+                                            const dotIndex = dotsInYear.findIndex(d => d.year === ev.year && d.month === ev.month);
+                                            const placeBelow = dotIndex % 2 === 1;
+                                            return placeBelow
+                                                ? y + (isHovered ? hoveredSize + 24 : baseSize + 18)
+                                                : y - (isHovered ? hoveredSize + 12 : baseSize + 6);
+                                        })()}
+                                        className={isExceptional ? "tl-dot-label-exceptional" : "tl-dot-label"}
+                                        textAnchor="middle"
+                                        style={{
+                                            fontSize: isHovered ? 17 : 13,
+                                            opacity: hoveredDot ? (isHovered ? 1 : 0.2) : 1,
+                                            transition: 'opacity 0.3s cubic-bezier(0.23, 1, 0.32, 1), font-size 180ms cubic-bezier(0.22,1,0.36,1)'
+                                        }}
+                                    >
+                                        {ev.category}
+                                    </text>
                                 );
                             })}
 
@@ -1582,15 +1855,15 @@ export default function ProgressTimeline({
                                                 textAnchor="middle"
                                                 className="tl-year-lock-hint"
                                                 style={{
-                                                    fill: 'rgba(255, 255, 255, 0.6)',
-                                                    fontSize: '9px',
+                                                    fill: 'rgba(255, 255, 255, 0.9)',
+                                                    fontSize: '10px',
                                                     fontFamily: 'Rajdhani, monospace',
                                                     letterSpacing: '0.08em',
                                                     textTransform: 'uppercase',
                                                     opacity: dim ? 0.38 : 1,
                                                 }}
                                             >
-                                                ( Click to unlock )
+                                                [ Click to unlock ]
                                             </text>
                                         )}
                                     </g>

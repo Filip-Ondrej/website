@@ -1,0 +1,37 @@
+import { ProjectItem } from '@/components/Projects';
+
+export const PROJECTS_TOP3: ProjectItem[] = [
+    {
+        id: 'proto-2x2',
+        title: '2×2 m Structural Prototype',
+        client: 'UNARCHI • Hamburg',
+        year: 2026,
+        blurb: 'Portable gantry with ±5 mm RMS closed-loop control and <2 h site setup.',
+        hero: '/images/projects/proto-2x2.jpg',
+        tags: ['prototype', 'closed-loop', 'setup-2h'],
+        ctaLabel: 'View Case',
+        ctaHref: '/cases/2x2',
+    },
+    {
+        id: 'hempcrete-demo',
+        title: 'Hempcrete Multi-Layer Demo',
+        client: 'Cannaxy + Berlin Architects',
+        year: 2026,
+        blurb: 'Validated mix + bead stability, achieving finish-ready outer layer in one pass.',
+        hero: '/images/projects/hempcrete-demo.jpg',
+        tags: ['materials', 'hempcrete', 'finish-pass'],
+        ctaLabel: 'View Case',
+        ctaHref: '/cases/hempcrete',
+    },
+    {
+        id: 'precision-wall',
+        title: 'Precision Wall—Finish in Hours',
+        client: 'Pilot Sandbox',
+        year: 2027,
+        blurb: 'Printed structural + finish layers same-day; handover-ready panel tolerances.',
+        hero: '/images/projects/precision-wall.jpg',
+        tags: ['finish', 'multimaterial', 'onsite'],
+        ctaLabel: 'View Case',
+        ctaHref: '/cases/precision-wall',
+    },
+];
