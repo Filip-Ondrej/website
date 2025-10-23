@@ -23,7 +23,7 @@ export default function Home() {
             </section>*/}
             <Hero
                 imageSrc="/images/me.jpg"
-                titleLines={['Filip Ondrej', 'Creative Webflow Dev']}
+                //titleLines={['Filip Ondrej', 'Creative Webflow Dev']}
                 kicker="[00] introduction"
             />
             <PromoVideo />
