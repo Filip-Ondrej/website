@@ -2,56 +2,48 @@
 
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
+import Image from 'next/image';
 
 /* ==================== TYPES ==================== */
-export type AchievementData = {
-    id: string;
-    title: string;
-    date: string;
-    age?: number;
+export type CollaborationData = {
+    slug: string;
+    name: string;
+    description: string;
+    established?: string;
+    duration?: string;
+    role?: string;
     location?: string;
-    images: string[];
-    videos?: string[];
+    outcomes: string[];
     tags: string[];
-    hook: string;
-    pullQuote: string;
-    challenge: string;
-    outcome: string;
-    metrics: string[];
+    images: string[];
     story: string;
-    insight: string;
 };
 
 type Props = {
-    data: AchievementData | null;
+    data: CollaborationData | null;
     isOpen: boolean;
     onClose: () => void;
+    logo?: string;
+    href?: string;
+    caption?: string;
 };
 
 /* ==================== COMPONENT ==================== */
-export default function AchievementModal({ data, isOpen, onClose }: Props) {
+export default function CollaborationModal({ data, isOpen, onClose, logo, href, caption }: Props) {
     const backdropRef = React.useRef<HTMLDivElement>(null);
     const containerRef = React.useRef<HTMLDivElement>(null);
     const [scrollProgress, setScrollProgress] = React.useState(0);
     const [activeSection, setActiveSection] = React.useState(0);
     const [isReading, setIsReading] = React.useState(false);
 
-    /* Calculate read time from story text (~225 wpm), stripping most Markdown/noise */
+    /* Calculate read time */
     function calcReadTimeFromMarkdown(raw: string, wpm = 225): number {
-        /* strip images: ![alt](url) */
         const noImages = raw.replace(/!\[[^\]]*]\([^)]*\)/g, " ");
-
-        /* strip fenced code blocks: ``` ... ``` */
         const noCodeBlocks = noImages.replace(/```[\s\S]*?```/g, " ");
-
-        /* strip inline code: `code` */
         const noInlineCode = noCodeBlocks.replace(/`[^`]*`/g, " ");
-
-        /* collapse punctuation to spaces */
         const plain = noInlineCode.replace(/[^\w\s]|_/g, " ");
-
         const words = plain.trim().split(/\s+/).filter(Boolean).length;
-        return Math.max(1, Math.ceil(words / wpm)); // at least 1 minute
+        return Math.max(1, Math.ceil(words / wpm));
     }
 
     /* Track reading state */
@@ -84,7 +76,6 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
             if (e.key === 'Escape') onClose();
         };
 
-        /* Handle arrow key navigation */
         const handleArrowKeys = (e: KeyboardEvent) => {
             const container = containerRef.current;
             if (!container) return;
@@ -102,7 +93,6 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
         document.addEventListener('keydown', handleArrowKeys);
         document.body.style.overflow = 'hidden';
 
-        /* RESET SCROLL TO TOP WHEN MODAL OPENS */
         const container = containerRef.current;
         if (container) {
             container.scrollTop = 0;
@@ -127,24 +117,20 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
             const progress = Math.min(1, scrolled / total);
             setScrollProgress(progress);
 
-            /* Determine active section based on scroll position */
             const sections = [
                 { id: 'hero', index: 0 },
-                { id: 'stakes', index: 1 },
-                { id: 'story', index: 2 },
-                { id: 'insight', index: 3 }
+                { id: 'summary', index: 1 },
+                { id: 'stakes', index: 2 },
+                { id: 'details', index: 3 }
             ];
 
             let current = 0;
-
             sections.forEach(({ id, index }) => {
                 const element = document.getElementById(id);
                 if (element) {
                     const rect = element.getBoundingClientRect();
                     const containerRect = container.getBoundingClientRect();
                     const relativeTop = rect.top - containerRect.top;
-
-                    /* Check if we've scrolled past the midpoint of this section */
                     if (relativeTop <= container.clientHeight * 0.5) {
                         current = index;
                     }
@@ -154,30 +140,22 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
             setActiveSection(current);
         };
 
-        /* Intersection Observer for reveal animations */
         const observer = new IntersectionObserver(
             (entries) => {
                 entries.forEach((entry) => {
                     if (entry.isIntersecting) {
                         entry.target.classList.add('in-view');
-
-                        /* Trigger counter animation for metrics */
-                        if (entry.target.classList.contains('metric-badge')) {
-                            const el = entry.target as HTMLElement;
-                            const finalText = el.dataset.value || el.textContent || '';
-                            animateValue(el, finalText);
-                        }
                     }
                 });
             },
             { threshold: 0.05 }
         );
 
-        const sections = container.querySelectorAll('.story-section, .metric-badge, .story-image');
+        const sections = container.querySelectorAll('.story-section, .collab-image');
         sections.forEach((section) => observer.observe(section));
 
         container.addEventListener('scroll', handleScroll);
-        handleScroll(); /* Initial call */
+        handleScroll();
 
         return () => {
             container.removeEventListener('scroll', handleScroll);
@@ -185,45 +163,19 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
         };
     }, [isOpen]);
 
-    /* Animate metric values */
-    const animateValue = (element: HTMLElement, value: string) => {
-        const match = value.match(/(\d+)/);
-        if (!match) {
-            element.textContent = value;
-            return;
-        }
-
-        const num = parseInt(match[1]);
-        const prefix = value.substring(0, match.index || 0);
-        const suffix = value.substring((match.index || 0) + match[1].length);
-
-        let current = 0;
-        const increment = num / 20;
-        const timer = setInterval(() => {
-            current += increment;
-            if (current >= num) {
-                current = num;
-                clearInterval(timer);
-            }
-            element.textContent = prefix + Math.floor(current) + suffix;
-        }, 50);
-    };
-
     const handleBackdropClick = (e: React.MouseEvent) => {
         if (e.target === backdropRef.current) onClose();
     };
 
     if (!isOpen || !data) return null;
 
-    /* Auto-calc read time from the story text */
     const readTime = calcReadTimeFromMarkdown(data?.story ?? "");
 
-    /* Section navigation */
     const sections = [
         { name: 'Intro', id: 'hero' },
+        { name: 'Summary', id: 'summary' },
         { name: 'Stakes', id: 'stakes' },
-        { name: 'Story', id: 'story' },
-        { name: 'Insight', id: 'insight' }
+        { name: 'Details', id: 'details' }
     ];
 
     const scrollToSection = (id: string) => {
@@ -231,11 +183,8 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
         const container = containerRef.current;
         if (!element || !container) return;
 
-        /* Get the height of the sticky progress panel*/
         const progressPanel = container.querySelector('.progress-system') as HTMLElement;
         const panelHeight = progressPanel?.offsetHeight || 0;
-
-        /* Calculate position accounting for the sticky panel*/
         const elementPosition = element.offsetTop;
         const offsetPosition = elementPosition - panelHeight;
 
@@ -257,11 +206,10 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
             </div>
 
             <div ref={containerRef} className="achievement-modal-container">
-                {/* Progress system - INSIDE modal */}
+                {/* Progress system */}
                 <div className="progress-system">
                     <div className="progress-bar" style={{ width: `${scrollProgress * 100}%` }} />
 
-                    {/* Close button - moved inside panel */}
                     <button className="close-btn-panel" onClick={onClose} aria-label="Close">
                         <div className="close-icon">
                             <span />
@@ -286,107 +234,124 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
 
                 {/* HERO */}
                 <div id="hero" className="hero-section">
-                    {data.images[0] && (
+                    {data.images && data.images[0] ? (
                         <>
-                            <img src={data.images[0]} alt={data.title} className="hero-image" />
+                            <img src={data.images[0]} alt={data.name} className="hero-image" />
                             <div className="hero-overlay" />
-                            <div className="hero-grid" />
                         </>
+                    ) : logo ? (
+                        <>
+                            <div className="hero-logo-wrapper">
+                                <Image
+                                    src={logo}
+                                    alt={data.name}
+                                    width={200}
+                                    height={200}
+                                    className="hero-logo"
+                                />
+                            </div>
+                            <div className="hero-overlay" />
+                        </>
+                    ) : (
+                        <div className="hero-overlay" />
                     )}
 
                     <div className="hero-content">
-                        <div className="hero-meta">
-                            <span className="meta-item">{data.date}</span>
-                            {data.age && <span className="meta-divider">/</span>}
-                            {data.age && <span className="meta-item">AGE {data.age}</span>}
-                            {data.location && <span className="meta-divider">/</span>}
-                            {data.location && <span className="meta-item">{data.location}</span>}
-                        </div>
+                        {caption && (
+                            <div className="hero-meta">
+                                <span className="meta-item">{caption}</span>
+                                {data.established && <span className="meta-divider">/</span>}
+                                {data.established && <span className="meta-item">{data.established}</span>}
+                                {data.location && <span className="meta-divider">/</span>}
+                                {data.location && <span className="meta-item">{data.location}</span>}
+                            </div>
+                        )}
 
                         <h1 className="hero-title">
-                            <span className="title-word">{data.title}</span>
+                            <span className="title-word">{data.name}</span>
                         </h1>
 
-                        <p className="hero-hook">{data.hook}</p>
+                        <p className="hero-hook">{data.description}</p>
                     </div>
 
-                    {/* Scroll indicator */}
                     <button
                         className="scroll-indicator"
-                        onClick={() => scrollToSection('stakes')}
-                        aria-label="Scroll to story"
+                        onClick={() => scrollToSection('summary')}
+                        aria-label="Scroll to content"
                     >
-                        <span className="scroll-text">Read the Story</span>
+                        <span className="scroll-text">Read More</span>
                         <svg className="scroll-arrow" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M12 5v14M19 12l-7 7-7-7" />
                         </svg>
                     </button>
                 </div>
 
-                {/* STAKES */}
-                <div id="stakes" className="story-section stakes-section">
+                {/* SUMMARY */}
+                <div id="summary" className="story-section summary-section">
                     <div className="section-header">
                         <span className="section-number">01</span>
-                        <span className="section-title">THE STAKES</span>
+                        <span className="section-title">SUMMARY</span>
                     </div>
 
-                    <div className="stakes-container">
-                        <div className="stake-card challenge">
-                            <div className="stake-header">
-                                <div className="stake-icon">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-                                    </svg>
-                                </div>
-                                <div className="stake-label">Challenge</div>
-                            </div>
-                            <p>{data.challenge}</p>
-                        </div>
+                    <div className="summary-content">
+                        <p className="summary-text">{data.description}</p>
 
-                        <div className="stakes-divider">
-                            <span className="divider-line" />
-                            <span className="divider-arrow">→</span>
-                            <span className="divider-line" />
-                        </div>
-
-                        <div className="stake-card outcome">
-                            <div className="stake-header">
-                                <div className="stake-icon">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <polyline points="20 6 9 17 4 12" />
-                                    </svg>
-                                </div>
-                                <div className="stake-label">Outcome</div>
+                        {(data.name || data.duration || data.location || data.role) && (
+                            <div className="summary-info">
+                                {data.name && (
+                                    <div className="info-card">
+                                        <div className="info-label">Institution:</div>
+                                        <div className="info-value">{data.name}</div>
+                                    </div>
+                                )}
+                                {data.duration && (
+                                    <div className="info-card">
+                                        <div className="info-label">Duration:</div>
+                                        <div className="info-value">{data.duration}</div>
+                                    </div>
+                                )}
+                                {data.location && (
+                                    <div className="info-card">
+                                        <div className="info-label">Location:</div>
+                                        <div className="info-value">{data.location}</div>
+                                    </div>
+                                )}
+                                {data.role && (
+                                    <div className="info-card">
+                                        <div className="info-label">Research Focus:</div>
+                                        <div className="info-value">{data.role}</div>
+                                    </div>
+                                )}
                             </div>
-                            <p>{data.outcome}</p>
-                        </div>
+                        )}
                     </div>
                 </div>
 
-                {/* METRICS */}
-                {data.metrics.length > 0 && (
-                    <div className="story-section metrics-section">
-                        <div className="metrics-grid">
-                            {data.metrics.map((metric, i) => (
-                                <div
-                                    key={i}
-                                    className="metric-badge"
-                                    data-value={metric}
-                                    style={{ animationDelay: `${i * 0.1}s` }}
-                                >
-                                    {metric}
+                {/* STAKES */}
+                {data.outcomes && data.outcomes.length > 0 && (
+                    <div id="stakes" className="story-section stakes-section">
+                        <div className="section-header">
+                            <span className="section-number">02</span>
+                            <span className="section-title">THE STAKES</span>
+                        </div>
+
+                        <div className="outcomes-grid">
+                            {data.outcomes.map((outcome, i) => (
+                                <div key={i} className="outcome-card">
+                                    <div className="outcome-marker">{String(i + 1).padStart(2, '0')}</div>
+                                    <p>{outcome}</p>
                                 </div>
                             ))}
                         </div>
                     </div>
                 )}
 
-                {/* STORY */}
-                <div id="story" className="story-section story-content">
+                {/* DETAILS */}
+                <div id="details" className="story-section story-content">
                     <div className="section-header">
                         <div>
-                            <span className="section-number">02</span>
-                            <span className="section-title">THE STORY</span>
+                            <span className="section-number">03</span>
+                            <span className="section-title">FULL DETAILS</span>
                         </div>
                         <div className="read-time-wrapper">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -408,33 +373,9 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                             h3: ({ children, ...props }) => (
                                 <h3 className="story-h3" {...props}>{children}</h3>
                             ),
-                            p: ({ children, ...props }) => {
-                                const text = children?.toString() || '';
-
-                                /* Handle inline images*/
-                                const imageMatch = text.match(/!\[IMAGE-(\d+)\]/);
-                                if (imageMatch) {
-                                    const idx = parseInt(imageMatch[1]);
-                                    const img = data.images[idx];
-                                    if (!img) return null;
-
-                                    const parts = img.split('#');
-                                    const imagePath = parts[0].trim();
-                                    const caption = parts[1]?.trim();
-
-                                    return (
-                                        <figure className="story-image">
-                                            <div className="image-wrapper">
-                                                <img src={imagePath} alt={caption || ''} />
-                                                <div className="image-border" />
-                                            </div>
-                                            {caption && <figcaption>{caption}</figcaption>}
-                                        </figure>
-                                    );
-                                }
-
-                                return <p className="story-p" {...props}>{children}</p>;
-                            },
+                            p: ({ children, ...props }) => (
+                                <p className="story-p" {...props}>{children}</p>
+                            ),
                             ul: ({ children, ...props }) => (
                                 <ul className="story-list" {...props}>{children}</ul>
                             ),
@@ -444,7 +385,7 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                             li: ({ children, ...props }) => (
                                 <li className="story-li" {...props}>{children}</li>
                             ),
-                            blockquote: ({ children, ...props }) => (
+                            blockquote: ({ children, ...props}) => (
                                 <blockquote className="story-quote" {...props}>
                                     <span className="quote-mark">|</span>
                                     {children}
@@ -457,28 +398,30 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     </ReactMarkdown>
                 </div>
 
-                {/* INSIGHT */}
-                {data.insight && (
-                    <div id="insight" className="story-section insight-section">
-                        <div className="section-header">
-                            <span className="section-number">03</span>
-                            <span className="section-title">THE LESSON</span>
-                        </div>
-                        <p className="insight-text">{data.insight}</p>
+                {/* FOOTER */}
+                {href && (
+                    <div className="story-section footer-section">
+                        <a
+                            href={href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="website-button"
+                        >
+                            <span>Visit Website</span>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                                <polyline points="15 3 21 3 21 9"/>
+                                <line x1="10" y1="14" x2="21" y2="3"/>
+                            </svg>
+                        </a>
                     </div>
                 )}
 
-                {/* FOOTER */}
-                <div className="story-section footer-section">
-                    <div className="footer-tags">
-                        {data.tags.map(tag => (
-                            <span key={tag} className="tag">#{tag}</span>
-                        ))}
-                    </div>
-                </div>
             </div>
 
             <style jsx>{`
+                /* COPY EXACT STYLES FROM ACHIEVEMENT MODAL */
+                
                 .achievement-modal-backdrop {
                     position: fixed;
                     inset: 0;
@@ -496,7 +439,6 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     to { opacity: 1; }
                 }
 
-                /* READING INDICATOR */
                 .reading-indicator {
                     position: fixed;
                     top: 0;
@@ -528,7 +470,6 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     to { transform: translateX(100%); }
                 }
 
-                /* MODAL CONTAINER - LOCKED ASPECT RATIO WITH VIEWPORT CONSTRAINT */
                 .achievement-modal-container {
                     width: min(85vw, 85vh);
                     height: min(85vw, 85vh);
@@ -554,7 +495,6 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     }
                 }
 
-                /* PROGRESS SYSTEM - NOW INSIDE MODAL */
                 .progress-system {
                     position: sticky;
                     top: 0;
@@ -575,7 +515,6 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
                 }
 
-                /* Close button inside panel */
                 .close-btn-panel {
                     position: absolute;
                     top: 50%;
@@ -592,7 +531,7 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
 
                 .close-btn-panel:hover {
                     border-color: rgba(255, 255, 255, 0.8);
-                    transform: translateY(-50%) rotate(90deg);  /* ← ADDED THIS! */
+                    transform: translateY(-50%) rotate(90deg);
                 }
 
                 .close-icon {
@@ -609,7 +548,7 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     width: 100%;
                     height: 1px;
                     background: rgba(255, 255, 255, 0.8);
-                    transition: transform 0.3s ease, background 0.3s ease;  /* ← ADDED background */
+                    transition: transform 0.3s ease, background 0.3s ease;
                 }
 
                 .close-icon span:first-child {
@@ -686,14 +625,126 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     color: rgba(255, 255, 255, 0.8);
                 }
 
+                /* SUMMARY SECTION */
+                .summary-section {
+                    padding: 50px 0;
+                    background: rgba(255, 255, 255, 0.01);
+                }
+
+                .summary-content {
+                    max-width: 900px;
+                    margin: 0 auto;
+                    padding: 0 60px;
+                }
+
+                .summary-text {
+                    font: 400 clamp(18px, 2.5vw, 22px)/1.6 'Rajdhani', monospace;
+                    color: rgba(255, 255, 255, 0.85);
+                    margin: 0 0 40px 0;
+                    text-align: center;
+                    max-width: 700px;
+                    margin-left: auto;
+                    margin-right: auto;
+                }
+
+                .summary-info {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                    gap: 20px;
+                    max-width: 800px;
+                    margin: 0 auto;
+                }
+
+                .info-card {
+                    padding: 24px;
+                    background: rgba(255, 255, 255, 0.05);
+                    border: 1px solid rgba(255, 255, 255, 0.15);
+                    position: relative;
+                    overflow: hidden;
+                    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+                }
+
+                .info-card::before {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: -100%;
+                    width: 100%;
+                    height: 1px;
+                    background: linear-gradient(90deg, 
+                        transparent 0%,
+                        rgba(255, 215, 0, 0.8) 50%,
+                        transparent 100%
+                    );
+                    transition: left 0.6s ease;
+                }
+
+                .info-card::after {
+                    content: '';
+                    position: absolute;
+                    inset: -2px;
+                    border-radius: inherit;
+                    background: linear-gradient(135deg, 
+                        rgba(255, 215, 0, 0) 0%,
+                        rgba(255, 215, 0, 0.15) 50%,
+                        rgba(255, 215, 0, 0) 100%
+                    );
+                    opacity: 0;
+                    transition: opacity 0.4s ease;
+                    pointer-events: none;
+                }
+
+                .info-card:hover {
+                    background: rgba(255, 255, 255, 0.08);
+                    border-color: rgba(255, 215, 0, 0.6);
+                    transform: translateY(-4px) scale(1.02);
+                    box-shadow: 0 8px 32px rgba(255, 215, 0, 0.2);
+                }
+
+                .info-card:hover::before {
+                    left: 100%;
+                }
+
+                .info-card:hover::after {
+                    opacity: 1;
+                }
+
+                .info-label {
+                    font: 600 11px/1 'Rajdhani', monospace;
+                    letter-spacing: 0.2em;
+                    text-transform: uppercase;
+                    color: rgba(255, 255, 255, 0.7);
+                    margin-bottom: 12px;
+                    transition: all 0.4s ease;
+                }
+
+                .info-card:hover .info-label {
+                    color: rgba(255, 215, 0, 0.95);
+                    text-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
+                }
+
+                .info-value {
+                    font: 400 16px/1.4 'Rajdhani', monospace;
+                    color: rgba(255, 255, 255, 0.9);
+                    transition: color 0.4s ease, text-shadow 0.4s ease;
+                }
+
+                .info-card:hover .info-value {
+                    font-weight: 600;
+                    color: rgba(255, 255, 255, 1);
+                    text-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
+                    letter-spacing: -0.003em;
+                }
+
                 /* HERO SECTION */
                 .hero-section {
                     position: relative;
                     width: 100%;
-                    aspect-ratio: 4 / 3; /* FIXED: Always 4:3 ratio */
+                    aspect-ratio: 4 / 3;
                     display: flex;
                     align-items: flex-end;
                     overflow: hidden;
+                    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
                 }
 
                 .hero-image {
@@ -701,8 +752,29 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     inset: 0;
                     width: 100%;
                     height: 100%;
-                    object-fit: cover; /* Keeps this so image fills the fixed container */
-                    object-position: center; /* Centers the image within the 4:3 container */
+                    object-fit: cover;
+                    object-position: center;
+                }
+
+                .hero-logo-wrapper {
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    width: 200px;
+                    height: 200px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 1;
+                }
+
+                .hero-logo {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: contain;
+                    opacity: 0.15;
+                    filter: brightness(1.5);
                 }
 
                 .hero-overlay {
@@ -713,10 +785,6 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                         rgba(0,0,0,0.7) 60%,
                         rgba(0,0,0,0.95) 100%
                     );
-                }
-
-                .hero-grid {
-                    display: none;
                 }
 
                 .hero-content {
@@ -785,7 +853,6 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     animation: fadeInUp 0.6s 0.4s ease forwards;
                 }
 
-                /* Scroll indicator - POSITIONED AT BOTTOM */
                 .scroll-indicator {
                     position: absolute;
                     bottom: -15px;
@@ -860,13 +927,13 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     }
                 }
 
-                /* SECTION HEADERS - CONSISTENT WIDTH */
+                /* SECTION HEADERS */
                 .section-header {
                     display: flex;
                     align-items: center;
                     gap: 16px;
                     margin-bottom: 40px;
-                    padding: 0 60px 16px 60px;
+                    padding: 0 80px 16px 80px;
                     max-width: 900px;
                     margin-left: auto;
                     margin-right: auto;
@@ -878,8 +945,8 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     content: '';
                     position: absolute;
                     bottom: 0;
-                    left: 50px;
-                    right: 50px;
+                    left: 70px;
+                    right: 70px;
                     height: 1px;
                     background: rgba(255, 255, 255, 0.2);
                 }
@@ -903,7 +970,7 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     color: rgba(255, 255, 255, 0.7);
                 }
 
-                /* STAKES SECTION */
+                /* OUTCOMES SECTION */
                 .stakes-section {
                     padding: 50px 0;
                     background: linear-gradient(to bottom,
@@ -912,18 +979,17 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     );
                 }
 
-                .stakes-container {
+                .outcomes-grid {
                     display: grid;
-                    grid-template-columns: 1fr auto 1fr;
-                    gap: 30px;
-                    align-items: center;
+                    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                    gap: 20px;
                     max-width: 900px;
                     margin: 0 auto;
                     padding: 0 60px;
                 }
 
-                .stake-card {
-                    padding: 28px;
+                .outcome-card {
+                    padding: 24px;
                     background: rgba(255, 255, 255, 0.05);
                     border: 1px solid rgba(255, 255, 255, 0.15);
                     position: relative;
@@ -931,7 +997,7 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
                 }
 
-                .stake-card::before {
+                .outcome-card::before {
                     content: '';
                     position: absolute;
                     top: 0;
@@ -946,7 +1012,7 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     transition: left 0.6s ease;
                 }
 
-                .stake-card::after {
+                .outcome-card::after {
                     content: '';
                     position: absolute;
                     inset: -2px;
@@ -961,146 +1027,50 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     pointer-events: none;
                 }
 
-                .stake-card:hover {
+                .outcome-card:hover {
                     background: rgba(255, 255, 255, 0.08);
                     border-color: rgba(255, 215, 0, 0.6);
-                    transform: translateY(-4px) scale(1.02);
+                    transform: translateY(-4px);
                     box-shadow: 0 8px 32px rgba(255, 215, 0, 0.2);
                 }
 
-                .stake-card:hover::before {
+                .outcome-card:hover::before {
                     left: 100%;
                 }
 
-                .stake-card:hover::after {
+                .outcome-card:hover::after {
                     opacity: 1;
                 }
 
-                .stake-header {
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                    margin-bottom: 16px;
-                }
-
-                .stake-icon {
-                    width: 20px;
-                    height: 20px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                }
-
-                .stake-icon svg {
-                    width: 100%;
-                    height: 100%;
-                    stroke: rgba(255, 255, 255, 0.6);
-                    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-                }
-
-                .stake-card:hover .stake-icon svg {
-                    stroke: rgba(255, 215, 0, 0.95);
-                    filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.6));
-                    transform: scale(1.1);
-                }
-
-                .stake-label {
-                    font: 600 11px/1 'Rajdhani', monospace;
-                    letter-spacing: 0.2em;
-                    text-transform: uppercase;
-                    color: rgba(255, 255, 255, 0.7);
+                .outcome-marker {
+                    font: 700 14px/1 'Rajdhani', monospace;
+                    color: rgba(255, 255, 255, 0.3);
+                    margin-bottom: 12px;
                     transition: all 0.4s ease;
                 }
 
-                .stake-card:hover .stake-label {
+                .outcome-card:hover .outcome-marker {
                     color: rgba(255, 215, 0, 0.95);
                     text-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
                 }
 
-                .stake-card p {
+                .outcome-card p {
                     font: 400 16px/1.6 'Rajdhani', monospace;
                     color: rgba(255, 255, 255, 0.9);
                     margin: 0;
                     transition: color 0.4s ease, text-shadow 0.4s ease;
                 }
 
-                .stake-card:hover p {
+                .outcome-card:hover p {
                     font-weight: 600;
                     color: rgba(255, 255, 255, 1);
                     text-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
                     letter-spacing: -0.003em;
                 }
 
-                .stakes-divider {
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                }
-
-                .divider-line {
-                    width: 20px;
-                    height: 1px;
-                    background: rgba(255, 255, 255, 0.1);
-                }
-
-                .divider-arrow {
-                    font-size: 20px;
-                    color: rgba(255, 255, 255, 0.3);
-                }
-
-                /* METRICS */
-                .metrics-section {
-                    padding: 20px 60px 40px 60px;
-                    background: #000000;
-                    position: relative;
-                    overflow: hidden;
-                }
-
-                .metrics-section::after {
-                    content: '';
-                    position: absolute;
-                    bottom: 0;
-                    left: 0;
-                    right: 0;
-                    height: 1px;
-                    background: rgba(255, 255, 255, 0.05);
-                }
-
-                .metrics-grid {
-                    display: flex;
-                    flex-wrap: wrap;
-                    gap: 16px;
-                    justify-content: center;
-                    position: relative;
-                }
-
-                .metric-badge {
-                    padding: 16px 24px;
-                    background: #000000;
-                    border: 1px solid rgba(255, 255, 255, 0.1);
-                    position: relative;
-                    overflow: hidden;
-                    font: 600 14px/1 'Rajdhani', monospace;
-                    letter-spacing: 0.08em;
-                    color: rgba(255, 255, 255, 0.9);
-                    text-transform: uppercase;
-                    opacity: 0;
-                    transform: translateY(20px);
-                    animation: metricReveal 0.5s ease forwards;
-                }
-
-                @keyframes metricReveal {
-                    to {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
-                }
-
                 /* STORY CONTENT */
                 .story-content {
                     padding: 50px 0;
-                    max-width: 900px;
-                    margin: 0 auto;
                 }
 
                 .story-content .section-header {
@@ -1109,28 +1079,25 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     align-items: center;
                     gap: 16px;
                     margin: 0 0 50px 0;
-                    padding: 0 60px 16px 60px;
+                    padding: 0 80px 16px 80px;
+                    max-width: 900px;
+                    margin-left: auto;
+                    margin-right: auto;
                 }
 
                 .story-content .section-header::after {
                     content: '';
                     position: absolute;
                     bottom: 0;
-                    left: 50px;
-                    right: 50px;
+                    left: 70px;
+                    right: 70px;
                     height: 1px;
                     background: rgba(255, 255, 255, 0.2);
                 }
 
-                .story-content .section-header > div:first-child {
-                    display: flex;
-                    align-items: center;
-                    gap: 16px;
-                }
-
                 .story-content .section-header .read-time-wrapper {
                     position: absolute;
-                    right: 60px;
+                    right: 80px;
                     top: 50%;
                     transform: translateY(-50%);
                     display: flex;
@@ -1143,15 +1110,9 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     white-space: nowrap;
                 }
 
-                .story-content .section-header .read-time-wrapper svg {
-                    opacity: 0.7;
-                    flex-shrink: 0;
-                }
-
                 .story-h2,
                 .story-h3,
                 .story-p,
-                .story-image,
                 .story-quote,
                 .story-list {
                     max-width: 550px;
@@ -1164,12 +1125,13 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     color: #FFFFFF;
                     margin: 60px auto 24px auto;
                     position: relative;
-                    padding-left: 24px;
+                    padding-left: 104px;
+                    padding-right: 60px;
                 }
 
                 .h2-marker {
                     position: absolute;
-                    left: 0;
+                    left: 80px;
                     top: 50%;
                     transform: translateY(-50%);
                     width: 12px;
@@ -1189,56 +1151,30 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     color: rgba(255, 255, 255, 0.9);
                     margin: 40px auto 16px auto;
                     position: relative;
-                    padding-left: 16px;
+                    padding-left: 104px;
+                    padding-right: 60px;
                 }
 
                 .story-h3::before {
                     content: '//';
                     position: absolute;
-                    left: 0;
+                    left: 80px;
                     color: rgba(255, 255, 255, 0.2);
                 }
 
                 .story-p {
                     font: 400 17px/1.7 'Rajdhani', monospace;
                     color: rgba(255, 255, 255, 0.75);
-                    margin: 20px auto;
+                    margin: 0 0 20px 0;
+                    padding-left: 120px;
+                    padding-right: 60px;
                 }
 
-                .story-emphasis {
-                    color: #FFFFFF;
-                    font-weight: 600;
-                    position: relative;
-                }
-
-                .story-emphasis::after {
-                    content: '';
-                    position: absolute;
-                    bottom: -2px;
-                    left: 0;
-                    width: 100%;
-                    height: 1px;
-                    background: rgba(255, 255, 255, 0.2);
-                    transform: scaleX(0);
-                    transition: transform 0.3s ease;
-                }
-
-                .story-emphasis:hover::after {
-                    transform: scaleX(1);
-                }
-                
                 .story-list {
-                    margin: 16px auto;
-                    padding-left: 1.25rem;
-                    list-style-position: outside;
-                }
-                
-                .story-list.ordered { 
-                    list-style-type: decimal; 
-                }
-                
-                .story-list:not(.ordered) { 
-                    list-style-type: disc; 
+                    padding-left: 140px;
+                    padding-right: 60px;
+                    margin: 0 auto 30px auto;
+                    list-style-type: disc;
                 }
 
                 .story-li {
@@ -1247,62 +1183,13 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     font: 400 17px/1.7 'Rajdhani', monospace;
                 }
 
-                .story-li > ul,
-                .story-li > ol {
-                    margin-top: 8px;
-                    margin-bottom: 8px;
-                }
-                
-                .story-image {
-                    margin: 50px auto;
-                    opacity: 0;
-                    transform: translateY(30px);
-                    transition: all 0.6s ease;
-                }
-
-                .story-image.in-view {
-                    opacity: 1;
-                    transform: translateY(0);
-                }
-
-                .image-wrapper {
-                    position: relative;
-                    overflow: hidden;
-                    background: #000000;
-                }
-
-                .story-image img {
-                    width: 100%;
-                    height: auto;
-                    max-height: 400px;
-                    object-fit: cover;
-                    display: block;
-                    transition: all 0.5s ease;
-                }
-
-                .story-image:hover img {
-                    transform: scale(1.02);
-                }
-
-                .image-border {
-                    position: absolute;
-                    inset: 0;
-                    border: 1px solid rgba(255, 255, 255, 0.1);
-                    pointer-events: none;
-                }
-
-                .story-image figcaption {
-                    padding: 12px 30px;
-                    font: 400 12px/1.4 'Rajdhani', monospace;
-                    color: rgba(255, 255, 255, 0.5);
-                    letter-spacing: 0.06em;
-                    text-transform: uppercase;
-                    background: rgba(0, 0, 0, 0.5);
-                }
-
                 .story-quote {
                     margin: 50px auto;
+                    margin-left: 120px;
+                    margin-right: 60px;
                     padding: 32px;
+                    padding-left: 48px;
+                    padding-right: 48px;
                     position: relative;
                     background: transparent;
                     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -1327,76 +1214,73 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     position: relative;
                 }
 
-                .insight-section {
-                    padding: 50px 60px;
-                    background: transparent;
-                    border-top: 1px solid rgba(255, 255, 255, 0.05);
-                    text-align: center;
-                    position: relative;
-                    max-width: 900px;
-                    margin: 0 auto;
+                .story-emphasis {
+                    font-weight: 700;
+                    color: rgba(255, 255, 255, 0.95);
                 }
 
-                .insight-section::before {
-                    content: '';
-                    position: absolute;
-                    top: -1px;
-                    left: 50%;
-                    transform: translateX(-50%);
-                    width: 80px;
-                    height: 1px;
-                    background: rgba(255, 255, 255, 0.3);
-                }
-
-                .insight-text {
-                    font: 500 clamp(22px, 3vw, 28px)/1.5 'Rajdhani', monospace;
-                    color: rgba(255, 255, 255, 0.9);
-                    margin: 0 auto;
-                    max-width: 600px;
-                    position: relative;
-                }
-                
-                #insight .section-header {
-                    padding: 0 0 16px 0;
-                    max-width: 900px;
-                    margin: 0 auto 50px;
-                    position: relative;
-                }
-
-                #insight .section-header::after {
-                    left: -10px;
-                    right: -10px;
-                }
-                
+                /* FOOTER */
                 .footer-section {
-                    padding: 40px 60px;
+                    padding: 60px;
                     border-top: 1px solid rgba(255, 255, 255, 0.05);
                     background: rgba(0, 0, 0, 0.5);
-                }
-
-                .footer-tags {
                     display: flex;
-                    flex-wrap: wrap;
-                    gap: 12px;
                     justify-content: center;
+                    align-items: center;
                 }
 
-                .tag {
-                    padding: 6px 12px;
+                .website-button {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 12px;
+                    padding: 18px 36px;
                     background: transparent;
-                    border: 1px solid rgba(255, 255, 255, 0.1);
-                    font: 400 11px/1 'Rajdhani', monospace;
-                    color: rgba(255, 255, 255, 0.5);
-                    letter-spacing: 0.08em;
-                    text-transform: lowercase;
+                    border: 1px solid rgba(255, 255, 255, 0.3);
+                    color: rgba(255, 255, 255, 0.9);
+                    font: 600 14px/1 'Rajdhani', monospace;
+                    letter-spacing: 0.12em;
+                    text-transform: uppercase;
+                    text-decoration: none;
                     transition: all 0.3s ease;
+                    position: relative;
+                    overflow: hidden;
                 }
 
-                .tag:hover {
-                    color: rgba(255, 255, 255, 0.8);
-                    border-color: rgba(255, 255, 255, 0.3);
+                .website-button::before {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: -100%;
+                    width: 100%;
+                    height: 100%;
+                    background: linear-gradient(90deg, 
+                        transparent 0%,
+                        rgba(255, 255, 255, 0.1) 50%,
+                        transparent 100%
+                    );
+                    transition: left 0.5s ease;
                 }
 
+                .website-button:hover::before {
+                    left: 100%;
+                }
+
+                .website-button:hover {
+                    border-color: rgba(255, 255, 255, 0.6);
+                    background: rgba(255, 255, 255, 0.08);
+                    transform: translateX(4px);
+                    box-shadow: 0 4px 16px rgba(255, 255, 255, 0.1);
+                }
+
+                .website-button svg {
+                    transition: transform 0.3s ease;
+                }
+
+                .website-button:hover svg {
+                    transform: translateX(2px) translateY(-2px);
+                }
+
+                /* SCROLLBAR */
                 .achievement-modal-container::-webkit-scrollbar {
                     width: 6px;
                 }
@@ -1433,31 +1317,23 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                         max-height: none;
                     }
                     .hero-section {
-                        aspect-ratio: 3 / 4; /* CHANGED: Taller ratio for mobile (portrait) */
+                        aspect-ratio: 3 / 4;
                     }
                     .section-dots {
                         gap: 20px;
                         padding: 16px;
                     }
-
                     .section-label {
                         font-size: 9px;
                     }
-
                     .hero-content {
                         padding: 40px 24px;
                     }
-
-                    .stakes-container {
+                    .outcomes-grid {
                         grid-template-columns: 1fr;
-                        gap: 24px;
+                        gap: 16px;
                         padding: 0 24px;
                     }
-
-                    .stakes-divider {
-                        transform: rotate(90deg);
-                    }
-
                     .section-header {
                         padding: 0 24px 16px 24px;
                     }

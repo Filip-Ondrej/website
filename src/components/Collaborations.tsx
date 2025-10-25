@@ -1,10 +1,11 @@
 'use client';
 
-import Link from 'next/link';
 import Image from 'next/image';
-import React, {useEffect, useRef, useState} from 'react';
-import {collaborators, type Collaborator} from '@/data/collaborators';
-import '@/styles/collaborations.css';
+import React, { useEffect, useRef, useState } from 'react';
+import { collaborators, type Collaborator } from '@/data/collaborators';
+import CollaborationModal from '@/components/CollaborationModal';
+import { loadCollaboration } from '@/lib/loadCollaboration';
+import type { CollaborationData } from '@/components/CollaborationModal';
 
 /********************************************************************
  * --------------------- COLLABORATION BRANDS --------------------- *
@@ -13,58 +14,76 @@ import '@/styles/collaborations.css';
 export default function Collaborations() {
     const railRef = useRef<HTMLDivElement | null>(null);
     const rowRef = useRef<HTMLUListElement | null>(null);
-    const [cloneCount, setCloneCount] = useState(5); // recomputed on mount/resize
+    const [cloneCount, setCloneCount] = useState(5);
 
+    // Modal state
+    const [selectedCollab, setSelectedCollab] = useState<Collaborator | null>(null);
+    const [collabData, setCollabData] = useState<CollaborationData | null>(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+
+    const openModal = async (collab: Collaborator) => {
+        setSelectedCollab(collab);
+        setIsModalOpen(true);
+        setIsLoading(true);
+
+        // Load markdown content using the library
+        const data = await loadCollaboration(collab.slug);
+
+        setCollabData(data);
+        setIsLoading(false);
+    };
+
+    const closeModal = () => {
+        setIsModalOpen(false);
+        setTimeout(() => {
+            setSelectedCollab(null);
+            setCollabData(null);
+        }, 300);
+    };
+
+    // 60fps scrolling animation for BRANDS rail
     useEffect(() => {
         const rail = railRef.current;
         const row = rowRef.current;
         if (!rail || !row) return;
 
-        let W = 0;                     // width of one row
-        let offset = 0;                // current position (px)
-        let velocity = 0;              // px/s, controlled by wheel + inertia
+        let W = 0;
+        let offset = 0;
+        let velocity = 0;
         let raf: number | null = null;
         let last = performance.now();
-        let paused = false;            // pause only the DRIFT on hover
+        let paused = false;
 
-        /* ---------- knobs ---------- */
-        const DRIFT = 40;              // px/s default autoplay (reduce if you like)
-        const WHEEL_GAIN = 1.2;        // how strongly a wheel event kicks velocity
-        const DAMPING = 0.9;           // 0.85–0.96; higher = longer coast
-        const MIN_VEL = 2;             // px/s threshold to stop coast
-        const MAX_VEL = 600;           // safety cap
-        /* --------------------------- */
+        const DRIFT = 40;
+        const WHEEL_GAIN = 1.2;
+        const DAMPING = 0.9;
+        const MIN_VEL = 2;
+        const MAX_VEL = 600;
 
         const compute = () => {
             W = row.scrollWidth;
             rail.style.height = `${row.getBoundingClientRect().height}px`;
-
-            // how many clones do we need? (viewport / row width) + buffer
             const vw = rail.clientWidth;
             setCloneCount(Math.max(3, Math.ceil(vw / (W || 1)) + 2));
         };
 
-        // resize & content load re-measure
         const ro = new ResizeObserver(compute);
         ro.observe(row);
 
-        // wrap to [0, W)
         const wrap = (px: number) => (!W ? px : ((px % W) + W) % W);
 
         const tick = (now: number) => {
-            const dt = Math.max(0.001, (now - last) / 1000);   // seconds, clamp tiny
+            const dt = Math.max(0.001, (now - last) / 1000);
             last = now;
 
-            // base drift (autoplay) only when not paused
             if (!paused) offset += DRIFT * dt;
 
-            // integrate velocity (coast), frame-rate independent damping
             offset += velocity * dt;
             const dampingPerSecond = Math.pow(DAMPING, dt * 60);
             velocity *= dampingPerSecond;
             if (Math.abs(velocity) < MIN_VEL) velocity = 0;
 
-            // apply wrapped transform to all rows
             if (W > 0) {
                 const rows = rail.querySelectorAll<HTMLElement>('.brands-row');
                 const total = rows.length;
@@ -80,28 +99,15 @@ export default function Collaborations() {
         const onWheel = (e: WheelEvent) => {
             if (!rail.matches(':hover')) return;
             e.preventDefault();
-
-            // prefer vertical deltas; fallback to horizontal
             const raw = e.deltaY !== 0 ? e.deltaY : e.deltaX;
-
-            // tame extreme deltas from high-res wheels/trackpads
             const clamped = Math.max(-120, Math.min(120, raw));
-
-            // add to velocity; sign so that wheel-down moves content left
             velocity += clamped * WHEEL_GAIN;
-            // cap velocity so it never goes out of hand
             velocity = Math.max(-MAX_VEL, Math.min(MAX_VEL, velocity));
         };
 
-        const onEnter = () => {
-            paused = true;
-        };
-        const onLeave = () => {
-            paused = false;
-        };
-        const onFocusIn = () => {
-            paused = true;
-        };
+        const onEnter = () => { paused = true; };
+        const onLeave = () => { paused = false; };
+        const onFocusIn = () => { paused = true; };
         const onFocusOut = (ev: FocusEvent) => {
             if (!rail.contains(ev.relatedTarget as Node)) paused = false;
         };
@@ -129,47 +135,529 @@ export default function Collaborations() {
     }, []);
 
     return (
-        <section aria-labelledby="collab-title" className="mt-12">
-            <Tape label="COLLABORATIONS & COMPANY EXPERIENCE" reverse={false}/>
+        <>
+            <section aria-labelledby="collab-title" className="collab-section">
+                {/* Decorative lines (horizontal + vertical) */}
+                <div className="collab-lines" aria-hidden="true">
+                    <div className="collab-line-horizontal" />
+                    <div className="collab-line-vertical" />
+                </div>
 
-            <div className="relative ">
-                <h2 id="collab-title" className="sr-only">
-                    Collaborations & Company Experience
-                </h2>
+                {/* Title - now RIGHT aligned */}
+                <div className="collab-header">
+                    <h2 id="collab-title" className="collab-title">
+                        <span className="title-line">
+                            <span className="title-word">Trusted</span>
+                            <span className="title-word">By</span>
+                            <span className="title-word">The</span>
+                            <span className="title-word">Best</span>
+                        </span>
+                    </h2>
+                </div>
 
-                <div className="brands overflow-hidden select-none">
-                    <div className="brands-rail" ref={railRef}>
-                        {/* Base row used for measuring and rendering */}
-                        <ul ref={rowRef} className="brands-row">
-                            {collaborators.map((c, idx) => (
-                                <BrandTile key={`base-${c.name}-${idx}`} c={c}/>
-                            ))}
-                        </ul>
+                {/* First Tape */}
+                <Tape label="COLLABORATIONS & COMPANY EXPERIENCE" reverse={false}/>
 
-                        {/* Clones — render exactly what compute() decided */}
-                        {Array.from({length: cloneCount}).map((_, i) => (
-                            <ul key={`clone-${i}`} className="brands-row" aria-hidden="true">
+                {/* Brands Rail */}
+                <div className="collab-content">
+                    <div className="brands">
+                        <div className="brands-rail" ref={railRef}>
+                            <ul ref={rowRef} className="brands-row">
                                 {collaborators.map((c, idx) => (
-                                    <BrandTile key={`clone-${i}-${c.name}-${idx}`} c={c}/>
+                                    <BrandTile
+                                        key={`base-${c.name}-${idx}`}
+                                        c={c}
+                                        onClick={() => openModal(c)}
+                                    />
                                 ))}
                             </ul>
-                        ))}
+
+                            {Array.from({length: cloneCount}).map((_, i) => (
+                                <ul key={`clone-${i}`} className="brands-row" aria-hidden="true">
+                                    {collaborators.map((c, idx) => (
+                                        <BrandTile
+                                            key={`clone-${i}-${c.name}-${idx}`}
+                                            c={c}
+                                            onClick={() => openModal(c)}
+                                        />
+                                    ))}
+                                </ul>
+                            ))}
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <Tape label="COLLABORATIONS & COMPANY EXPERIENCE" reverse/>
-        </section>
+                {/* Second Tape */}
+                <Tape label="COLLABORATIONS & COMPANY EXPERIENCE" reverse/>
+            </section>
+
+            {/* Loading Overlay */}
+            {isLoading && (
+                <div className="collab-loading-overlay">
+                    <div className="loading-spinner"></div>
+                    <p>Loading collaboration details...</p>
+                </div>
+            )}
+
+            {/* Modal */}
+            <CollaborationModal
+                data={collabData}
+                isOpen={isModalOpen && !isLoading}
+                onClose={closeModal}
+                logo={selectedCollab?.logo}
+                href={selectedCollab?.href}
+                caption={selectedCollab?.caption}
+            />
+
+            <style jsx global>{`
+                /* ============================================== */
+                /* SECTION LAYOUT */
+                /* ============================================== */
+
+                .collab-section {
+                    position: relative;
+                    padding: 80px 0;
+                }
+
+                .collab-content {
+                    position: relative;
+                }
+
+                /* --- lines wrapper --- */
+                .collab-lines {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    height: 0; /* it's just a container for absolutely positioned lines */
+                    pointer-events: none;
+                    z-index: 1;
+                }
+
+                /* horizontal line:
+                   from 100px from left viewport to 100px from right viewport */
+                .collab-line-horizontal {
+                    position: absolute;
+                    top: 0;
+                    left: 100px;
+                    right: 100px;
+                    height: 1px;
+                    background: rgba(255,255,255,0.12);
+                }
+
+                /* vertical line:
+                   sits at the same x as the RIGHT end of the horizontal line,
+                   drops down until just before the first tape starts.
+                   The first tape appears after .collab-header's bottom margin (60px),
+                   so we go ~60px downward.
+                */
+                .collab-line-vertical {
+                    position: absolute;
+                    top: 0;
+                    right: 100px;
+                    width: 1px;
+                    height: 210px; /* this matches the gap before the first Tape */
+                    background: rgba(255,255,255,0.12);
+                }
+
+                /* header aligned RIGHT now */
+                .collab-header {
+                    position: relative;
+                    z-index: 2;
+                    max-width: 1400px;
+                    margin: 0 auto 60px;
+                    padding: 0 100px;
+                    display: flex;
+                    justify-content: flex-end; /* push content to the right */
+                    text-align: right;
+                }
+
+                .collab-title {
+                    font-family: 'Rajdhani', monospace;
+                    font-size: clamp(40px, 5vw, 72px);
+                    font-weight: 800;
+                    line-height: 1.0;
+                    letter-spacing: -0.02em;
+                    color: #fff;
+                    text-transform: uppercase;
+                    margin: 0;
+                }
+
+                .title-line {
+                    display: block;
+                }
+
+                .title-word {
+                    display: inline-block;
+                    margin-right: 0.25em;
+                }
+
+                /* ============================================== */
+                /* LOADING OVERLAY */
+                /* ============================================== */
+
+                .collab-loading-overlay {
+                    position: fixed;
+                    inset: 0;
+                    background: rgba(0, 0, 0, 0.92);
+                    backdrop-filter: blur(8px);
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 20px;
+                    z-index: 9999;
+                }
+
+                .loading-spinner {
+                    width: 48px;
+                    height: 48px;
+                    border: 3px solid rgba(255, 255, 255, 0.1);
+                    border-top-color: rgba(255, 255, 255, 0.6);
+                    border-radius: 50%;
+                    animation: spin 1s linear infinite;
+                }
+
+                @keyframes spin {
+                    to { transform: rotate(360deg); }
+                }
+
+                .collab-loading-overlay p {
+                    font: 400 14px/1 'Rajdhani', monospace;
+                    color: rgba(255, 255, 255, 0.6);
+                    letter-spacing: 0.08em;
+                    text-transform: uppercase;
+                }
+
+                /* ============================================== */
+                /* TAPE SECTION */
+                /* ============================================== */
+
+                .tape {
+                    overflow: hidden;
+                    border-top: 1px solid #fff;
+                    border-bottom: 1px solid #fff;
+                    -webkit-mask-image: -webkit-linear-gradient(
+                        left,
+                        rgba(0,0,0,0) 0,
+                        rgba(0,0,0,1) 32px,
+                        rgba(0,0,0,1) calc(100% - 32px),
+                        rgba(0,0,0,0) 100%
+                    );
+                    mask-image: linear-gradient(
+                        to right,
+                        rgba(0,0,0,0) 0,
+                        rgba(0,0,0,1) 32px,
+                        rgba(0,0,0,1) calc(100% - 32px),
+                        rgba(0,0,0,0) 100%
+                    );
+                }
+
+                .tape-rail {
+                    position: relative;
+                    overflow: hidden;
+                    width: 100%;
+                    height: auto;
+                }
+
+                .tape-row {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    display: inline-flex;
+                    gap: 0.75rem;
+                    white-space: nowrap;
+                    will-change: transform;
+                }
+
+                .tape-block {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                    white-space: nowrap;
+                    padding-block: 1px;
+                    color: #fff;
+                    font-family: 'Rajdhani', monospace;
+                }
+
+                .tape-chunk {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                    font-family: 'Rajdhani', monospace;
+                }
+
+                .tape-label {
+                    font-family: 'Rajdhani', monospace;
+                    font-size: 11px !important;
+                    letter-spacing: 0.18em;
+                    text-transform: uppercase;
+                }
+
+                .tape-code {
+                    font-family: 'Rajdhani', monospace;
+                    font-size: 10px !important;
+                    letter-spacing: 0.12em;
+                    text-transform: uppercase;
+                }
+
+                .tape-codeword {
+                    display: inline-flex;
+                    gap: 0;
+                    letter-spacing: 0;
+                }
+
+                .tape-slot {
+                    display: inline-block;
+                    width: 1.1ch;
+                    text-align: center;
+                    line-height: 1;
+                }
+
+                .tape-slot[data-mode="digit"] {
+                    font-variant-numeric: tabular-nums;
+                    font-feature-settings: "tnum" 1;
+                }
+
+                /* ============================================== */
+                /* BRANDS SECTION */
+                /* ============================================== */
+
+                .brands {
+                    position: relative;
+                    -webkit-mask-image: -webkit-linear-gradient(
+                        left,
+                        rgba(0,0,0,0) 0,
+                        rgba(0,0,0,1) 24px,
+                        rgba(0,0,0,1) calc(100% - 24px),
+                        rgba(0,0,0,0) 100%
+                    );
+                    mask-image: linear-gradient(
+                        to right,
+                        rgba(0,0,0,0) 0,
+                        rgba(0,0,0,1) 24px,
+                        rgba(0,0,0,1) calc(100% - 24px),
+                        rgba(0,0,0,0) 100%
+                    );
+                    overflow: hidden;
+                    user-select: none;
+                }
+
+                .brands-rail {
+                    position: relative;
+                    overflow: hidden;
+                    width: 100%;
+                    height: auto;
+                    touch-action: pan-x;
+                }
+
+                .brands-row {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    display: flex;
+                    gap: 0;
+                    list-style: none;
+                    padding: 0;
+                    margin: 0;
+                    will-change: transform;
+                }
+
+                /* ============================================== */
+                /* BRAND TILES */
+                /* ============================================== */
+
+                .brand {
+                    position: relative;
+                    width: clamp(130px, 14vw, 230px);
+                    aspect-ratio: 6 / 5;
+                    display: grid;
+                    place-items: center;
+                    flex-shrink: 0;
+                    transition: opacity 0.4s ease-in-out 0.05s;
+                    cursor: pointer;
+                }
+
+                .brand-link {
+                    position: absolute;
+                    inset: 0;
+                    display: grid;
+                    place-items: center;
+                    text-decoration: none;
+                    outline: none;
+                    z-index: 1;
+                }
+
+                .brand-link img {
+                    opacity: 0.85;
+                    transition: opacity 0.25s ease;
+                }
+
+                .brand-name {
+                    font-size: clamp(1rem, 1.6vw, 1.8rem);
+                    font-weight: 700;
+                    text-transform: none;
+                    color: #fff;
+                }
+
+                .brands:hover .brand {
+                    opacity: 0.5;
+                }
+
+                .brands:hover .brand:hover {
+                    opacity: 1;
+                }
+
+                .brands:hover .brand:hover img {
+                    opacity: 1;
+                }
+
+                .brand-card {
+                    position: absolute;
+                    inset: 0;
+                    pointer-events: none;
+                    background:
+                        linear-gradient(
+                            180deg,
+                            rgba(255,255,255,0.22) 0%,
+                            rgba(255,255,255,0.10) 36%,
+                            rgba(255,255,255,0.04) 70%,
+                            rgba(255,255,255,0) 100%
+                        ),
+                        radial-gradient(
+                            120% 60% at 50% 100%,
+                            rgba(0,0,0,0.16),
+                            rgba(0,0,0,0) 60%
+                        );
+                    opacity: 0;
+                    transition:
+                        opacity 0.45s cubic-bezier(0.23, 1, 0.32, 1),
+                        border-color 0.45s cubic-bezier(0.23, 1, 0.32, 1);
+                    border-left: 1px solid rgba(255,255,255,0.10);
+                    border-right: 1px solid rgba(255,255,255,0.10);
+                    z-index: 2;
+                }
+
+                .brand:hover .brand-card {
+                    opacity: 1;
+                    border-color: rgba(255,255,255,0.35);
+                }
+
+                .brand-corner {
+                    position: absolute;
+                    top: 10px;
+                    right: 12px;
+                    width: 28px;
+                    height: 28px;
+                    pointer-events: none;
+                    opacity: 0;
+                    transform: translate(-6px, 6px) scale(0.25);
+                    transform-origin: bottom left;
+                    transition:
+                        opacity 0.28s ease-out,
+                        transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+                    z-index: 3;
+                }
+
+                .brand-corner svg {
+                    stroke: rgba(255,255,255,0.92);
+                }
+
+                .brand:hover .brand-corner {
+                    opacity: 1;
+                    transform: translate(0, 0) scale(1);
+                }
+
+                .brand-caption {
+                    position: absolute;
+                    left: 12px;
+                    bottom: 8px;
+                    font-size: 14px;
+                    font-family: 'Rajdhani', monospace;
+                    font-weight: 500;
+                    letter-spacing: 0.12em;
+                    color: rgba(255,255,255,0.92);
+                    text-shadow: 0 0 6px rgba(0,0,0,0.35);
+                    text-transform: uppercase;
+                    opacity: 0;
+                    transition: opacity 0.3s ease;
+                    z-index: 3;
+                }
+
+                .brand:hover .brand-caption {
+                    opacity: 1;
+                }
+
+                /* ============================================== */
+                /* RESPONSIVE */
+                /* ============================================== */
+
+                @media (max-width: 1024px) {
+                    .collab-header {
+                        padding: 0 60px;
+                    }
+                    .collab-line-horizontal {
+                        left: 60px;
+                        right: 60px;
+                    }
+                    .collab-line-vertical {
+                        right: 60px;
+                    }
+                }
+
+                @media (max-width: 640px) {
+                    .collab-section {
+                        padding: 60px 0;
+                    }
+
+                    .collab-header {
+                        padding: 0 40px;
+                        margin-bottom: 40px;
+                    }
+
+                    .collab-line-horizontal {
+                        left: 40px;
+                        right: 40px;
+                    }
+                    .collab-line-vertical {
+                        right: 40px;
+                        height: 40px; /* shorter gap on mobile if header margin shrinks */
+                    }
+                }
+
+                @media (prefers-reduced-motion: reduce) {
+                    .tape-row,
+                    .brands-row {
+                        will-change: auto;
+                    }
+                    .brand-corner {
+                        transition: opacity 0.2s ease;
+                        transform: none;
+                    }
+                    .brand:hover .brand-corner {
+                        opacity: 1;
+                    }
+                    .loading-spinner {
+                        animation: none;
+                        border-top-color: rgba(255, 255, 255, 0.3);
+                    }
+                }
+            `}</style>
+        </>
     );
 }
 
 
 /********************************************************************
- * -------------------------- BRANDS ROW -------------------------- *
+ * -------------------------- BRAND TILE -------------------------- *
  ********************************************************************/
 
-function BrandTile({c}: { c: Collaborator }) {
-    // We allow missing logos and fallback to the brand name
+interface BrandTileProps {
+    c: Collaborator;
+    onClick: () => void;
+}
+
+function BrandTile({ c, onClick }: BrandTileProps) {
     const content = c.logo ? (
         <Image
             src={c.logo}
@@ -183,48 +671,37 @@ function BrandTile({c}: { c: Collaborator }) {
         <span className="brand-name">{c.name}</span>
     );
 
-    // Wrapper that fills the tile (same layout whether Link or div)
-    const Inner = ({children}: { children: React.ReactNode }) => (
-        <div className="brand-link relative w-full h-full grid place-items-center">
-            {children}
-            {/* hover chrome */}
-            <span className="brand-card" aria-hidden="true">
-            <span className="brand-corner" aria-hidden="true">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28" stroke="white"
-                     fill="none" strokeWidth="0.75" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M4 5 v14"/>
-                    <path d="M4 5 h3"/>
-                    <path d="M4 19 h3"/>
-
-                    <path d="M20 5 v14"/>
-                    <path d="M20 5 h-3"/>
-                    <path d="M20 19 h-3"/>
-
-                    <path d="M9 15 L15 9"/>
-                    <path d="M15 9 h-4"/>
-                    <path d="M15 9 v4"/>
-                </svg>
-            </span>
-        <span className="brand-caption">[{c.caption ?? 'BRAND'}]</span>
-      </span>
-        </div>
-    );
-
     return (
         <li className="brand">
-            {c.href ? (
-                <Link
-                    href={c.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={c.name}
-                    className="contents"
-                >
-                    <Inner>{content}</Inner>
-                </Link>
-            ) : (
-                <Inner>{content}</Inner>
-            )}
+            <div className="brand-link" onClick={onClick}>
+                {content}
+                <span className="brand-card" aria-hidden="true">
+                    <span className="brand-corner" aria-hidden="true">
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            width="28"
+                            height="28"
+                            stroke="white"
+                            fill="none"
+                            strokeWidth="0.75"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                        >
+                            <path d="M4 5 v14" />
+                            <path d="M4 5 h3" />
+                            <path d="M4 19 h3" />
+                            <path d="M20 5 v14" />
+                            <path d="M20 5 h-3" />
+                            <path d="M20 19 h-3" />
+                            <path d="M9 15 L15 9" />
+                            <path d="M15 9 h-4" />
+                            <path d="M15 9 v4" />
+                        </svg>
+                    </span>
+                    <span className="brand-caption">{c.caption || 'PARTNERSHIP'}</span>
+                </span>
+            </div>
         </li>
     );
 }
@@ -247,12 +724,12 @@ function Tape({
     const rowRef = useRef<HTMLDivElement | null>(null);
     const [cloneCount, setCloneCount] = useState(5);
 
-    // ====== MATRIX FLICKER for the code word (unchanged logic) ======
     const codeUp = code.toUpperCase();
     const len = codeUp.length;
     const [current, setCurrent] = useState(codeUp);
     const [mode, setMode] = useState<'word' | 'digit'>('word');
 
+    // flicker effect for code
     useEffect(() => {
         const prefersReduced =
             window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
@@ -299,7 +776,7 @@ function Tape({
         };
     }, [codeUp, len]);
 
-    // ====== INFINITE DRIFT (no keyframes, no glitch) ======
+    // marquee scroll for tape rows
     useEffect(() => {
         const rail = railRef.current;
         const row = rowRef.current;
@@ -308,24 +785,19 @@ function Tape({
         const prefersReduced =
             window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
-        let W = 0;               // width of a single tape row
-        let offset = 0;          // px
+        let W = 0;
+        let offset = 0;
         let raf: number | null = null;
         let last = performance.now();
         let paused = false;
 
-        // knobs
-        const DRIFT = 15;        // px/sec (tape speed)
+        const DRIFT = 15;
         const dir = reverse ? -1 : 1;
 
         const compute = () => {
             W = row.scrollWidth;
-
-            // height from content
             const h = row.getBoundingClientRect().height;
             rail.style.height = `${h}px`;
-
-            // number of extra clones to cover viewport
             const vw = rail.clientWidth;
             setCloneCount(Math.max(3, Math.ceil(vw / (W || 1)) + 2));
         };
@@ -355,12 +827,8 @@ function Tape({
             raf = requestAnimationFrame(tick);
         };
 
-        const onEnter = () => {
-            paused = true;
-        };
-        const onLeave = () => {
-            paused = false;
-        };
+        const onEnter = () => { paused = true; };
+        const onLeave = () => { paused = false; };
 
         compute();
         raf = requestAnimationFrame(tick);
@@ -378,44 +846,41 @@ function Tape({
         };
     }, [reverse]);
 
-    // ====== one block inside the tape ======
     const Slashes = () => (
         <span className="tape-chunk" aria-hidden="true">
-      {'/////////////////////////'}
-    </span>
+            {'/////////////////////////'}
+        </span>
     );
 
     const Block = (i: number) => (
         <div className="tape-block" key={i}>
-            <Slashes/>
+            <Slashes />
             <span className="tape-code tape-codeword" aria-hidden="true">
-        {current.split('').map((ch, idx) => (
-            <span
-                className="tape-slot"
-                data-mode={mode === 'digit' ? 'digit' : 'word'}
-                key={idx}
-            >
-            {ch}
-          </span>
-        ))}
-      </span>
-            <Slashes/>
+                {current.split('').map((ch, idx) => (
+                    <span
+                        className="tape-slot"
+                        data-mode={mode === 'digit' ? 'digit' : 'word'}
+                        key={idx}
+                    >
+                        {ch}
+                    </span>
+                ))}
+            </span>
+            <Slashes />
             <span className="tape-label">{label}</span>
         </div>
     );
 
     const BLOCKS_PER_ROW = 8;
-    const blocks = Array.from({length: BLOCKS_PER_ROW}, (_, i) => Block(i));
+    const blocks = Array.from({ length: BLOCKS_PER_ROW }, (_, i) => Block(i));
 
     return (
         <div className="tape">
             <div className="tape-rail" ref={railRef}>
-                {/* base row used for measurement and rendering */}
                 <div className="tape-row" ref={rowRef}>
                     {blocks}
                 </div>
-                {/* clones — number computed in effect */}
-                {Array.from({length: cloneCount}).map((_, i) => (
+                {Array.from({ length: cloneCount }).map((_, i) => (
                     <div className="tape-row" aria-hidden="true" key={`clone-${i}`}>
                         {blocks}
                     </div>

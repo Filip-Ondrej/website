@@ -424,7 +424,7 @@ const styles = `
     top: 260px;
     bottom: -20px;
     width: 1px;
-    background: rgba(255,255,255,0.14);
+    background: rgba(255,255,255,0.12);
     pointer-events: none;
 }
 

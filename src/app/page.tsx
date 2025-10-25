@@ -5,6 +5,8 @@ import Projects from '@/components/Projects';
 //import { PROJECTS_TOP3 } from '@/data/projects';
 import Hero from '@/components/Hero';
 
+import Recognition from '@/components/Recognition';
+
 //import { filipRealEvents, type ProgressEvent } from '@/data/graphData';
 //const events: ProgressEvent[] = filipRealEvents; // Or define your own array here
 
@@ -23,13 +25,14 @@ export default function Home() {
             </section>*/}
             <Hero
                 imageSrc="/images/me.jpg"
-                //titleLines={['Filip Ondrej', 'Creative Webflow Dev']}
                 kicker="[00] introduction"
             />
             <PromoVideo />
             <ProgressTimeline />
             <Projects />
             <Collaborations />
+            <Recognition />
+            {/*<Recognition />*/}
         </main>
     );
 }
