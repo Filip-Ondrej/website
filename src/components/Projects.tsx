@@ -20,9 +20,8 @@ const PROJECTS: ProjectItem[] = [
         blurb:
             'Custom-designed autonomous rescue robot with hand-soldered PCBs, 3D-printed chassis, and advanced sensor arrays. Competed against 20+ countries and won Best Hardware Award for engineering excellence.',
         images: [
-            '/images/projects/thailand-main.jpg',
-            '/images/projects/thailand-pcb.jpg',
-            '/images/projects/thailand-assembly.jpg',
+            '/images/projects/thailand.jpg',
+            '/images/projects/thailand2.jpg',
         ],
         tags: ['world-class', 'pcb-design', 'embedded'],
     },
@@ -33,9 +32,10 @@ const PROJECTS: ProjectItem[] = [
         blurb:
             'Led team to 4th place finish at age 15 in virtual rescue simulation category. Programmed multi-agent coordination, A* pathfinding, and triage algorithms.',
         images: [
-            '/images/projects/sydney-main.jpg',
-            '/images/projects/sydney-team.jpg',
-            '/images/projects/sydney-arena.jpg',
+            '/images/projects/sydney.jpg',
+            '/images/projects/sydney2.jpg',
+            '/images/projects/sydney3.jpg',
+            '/images/projects/sydney4.jpg',
         ],
         tags: ['multi-agent', 'pathfinding', 'world-class'],
     },
@@ -47,8 +47,8 @@ const PROJECTS: ProjectItem[] = [
             'Autonomous line-following with debris avoidance, ramp climbing and victim detection. Custom PCB design, PID control loops. Won 5 of 6 categories at nationals.',
         images: [
             '/images/projects/robocup-line.jpg',
-            '/images/projects/line-robot-side.jpg',
-            '/images/projects/line-robot-pcb.jpg',
+            '/images/projects/robocup-line2.jpg',
+            '/images/projects/robocup-line3.jpg',
         ],
         tags: ['robotics', 'embedded', 'pid'],
     },
