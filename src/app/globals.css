@@ -6,37 +6,129 @@
     --color-muted: #a1a1aa;
 
     /* Fonts */
-    --font-bank: 'Bank Gothic', 'bankGothic Fallback';
     --font-sans: 'Rajdhani', 'Rajdhani Fallback';
 }
 
 :root {
     color-scheme: dark;
+
+    /* Responsive spacing system */
+    --space-xs: clamp(0.5rem, 1vw, 0.75rem);
+    --space-sm: clamp(0.75rem, 2vw, 1rem);
+    --space-md: clamp(1rem, 3vw, 1.5rem);
+    --space-lg: clamp(1.5rem, 4vw, 2.5rem);
+    --space-xl: clamp(2rem, 6vw, 4rem);
+    --space-2xl: clamp(3rem, 8vw, 6rem);
+
+    /* Responsive font sizes */
+    --font-xs: clamp(0.75rem, 1.5vw, 0.875rem);
+    --font-sm: clamp(0.875rem, 2vw, 1rem);
+    --font-base: clamp(1rem, 2.5vw, 1.125rem);
+    --font-lg: clamp(1.25rem, 3vw, 1.5rem);
+    --font-xl: clamp(1.5rem, 4vw, 2rem);
+    --font-2xl: clamp(2rem, 5vw, 3rem);
+    --font-3xl: clamp(2.5rem, 6vw, 4rem);
 }
 
 body {
     background: var(--color-bg);
     color: var(--color-fg);
-    font-family: var(--font-sans), monospace; /* Rajdhani everywhere by default */
+    font-family: var(--font-sans), monospace;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
 
+/* Base container - responsive by default */
 .container {
     width: 100%;
     max-width: 1120px;
     margin-inline: auto;
-    padding-inline: 1rem;
+    padding-inline: clamp(1rem, 4vw, 2rem); /* Fluid padding */
 }
 
-.h1 {
-    letter-spacing: 0.015em;
-    font: 700 clamp(2.6rem, 4vw, 4.25rem)/1.05 var(--font-bank);
+/* Responsive grid utilities - use these for cards, projects, etc */
+.grid-auto-sm {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+    gap: var(--space-md);
 }
+
+.grid-auto-md {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+    gap: var(--space-lg);
+}
+
+.grid-auto-lg {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 350px), 1fr));
+    gap: var(--space-xl);
+}
+
+/* Responsive flex utilities */
+.flex-wrap-center {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-md);
+}
+
+/* Square cards that maintain aspect ratio */
+.aspect-square {
+    aspect-ratio: 1 / 1;
+}
+
+.aspect-video {
+    aspect-ratio: 16 / 9;
+}
+
+.aspect-portrait {
+    aspect-ratio: 3 / 4;
+}
+
+/* Section spacing utility */
+.section-spacing {
+    padding-block: var(--space-2xl);
+}
+
+/* Responsive text utilities */
+.text-responsive-sm { font-size: var(--font-sm); }
+.text-responsive-base { font-size: var(--font-base); }
+.text-responsive-lg { font-size: var(--font-lg); }
+.text-responsive-xl { font-size: var(--font-xl); }
+.text-responsive-2xl { font-size: var(--font-2xl); }
+.text-responsive-3xl { font-size: var(--font-3xl); }
 
 @property --sx {
     syntax: '<number>';
     inherits: false;
     initial-value: 1;
 }
+/* Make any section a container so cqi/cqh work inside */
+.cq { container-type: size; }
+
+/* Big uppercase title that stays stable across zoom */
+.title-xxl-uc {
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgba(255,255,255,0.88);
+    line-height: 0.95;
+    /* container-relative sizing (tracks the hero’s size, not viewport) */
+    font-size: clamp(40px, max(7cqh, 4.5cqi), 84px);
+}
+
+/* Smaller caption */
+.subtitle-sm {
+    color: var(--color-muted);
+    text-shadow: 0 1px 12px rgba(0,0,0,0.25);
+    font-size: clamp(var(--font-sm), max(2.2cqh, 1.5cqi), var(--font-base));
+}
+
+/* Fallback if cqi/cqh unavailable */
+@supports not (font-size: 1cqi) {
+    .title-xxl-uc { font-size: clamp(40px, min(6.5vh, 5.5vw), 84px); }
+    .subtitle-sm  { font-size: clamp(var(--font-sm), 1.8vw, var(--font-base)); }
+}
+

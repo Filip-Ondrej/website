@@ -65,6 +65,7 @@ export const filipRealEvents: ProgressEvent[] = [
     { year: 2021, month: 5.1, level: 3.9, impactType: 'National', category: 'No Stopping Now', significant: true },
     { year: 2021, month: 6.2, level: 3.0, impactType: 'Lesson', category: 'Istrobot' },
     { year: 2021, month: 6.8, level: 3.0, impactType: 'International', category: 'FLL WorldCup' },
+    { year: 2021, month: 9.3, level: 3.1, impactType: 'Regional', category: 'FLL WorldCup' },
 
     // 2022 - Dominance (Age 18, 3rd year)
     { year: 2022, month: 2, level: 4.5, impactType: 'International', category: 'Europe 4th + Hardware Award', significant: true },

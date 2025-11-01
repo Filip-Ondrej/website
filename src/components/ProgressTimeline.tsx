@@ -145,135 +145,7 @@ function useHintVisibility() {
 }
 
 
-// NEW: Scroll-driven typewriter with pause detection
-// NEW: Scroll-driven typewriter with pause detection
-function useScrollTypewriter(ref: React.RefObject<HTMLDivElement | null>) {
-    const [scrollProgress, setScrollProgress] = React.useState(0);
-    const [isPaused, setIsPaused] = React.useState(false);
-    const pauseTimerRef = React.useRef<number | null>(null);
-    const lastProgressRef = React.useRef(0);
-    const lastChangeTimeRef = React.useRef(Date.now());
 
-    React.useEffect(() => {
-        const el = ref.current;
-        if (!el) return;
-
-        let rafId: number | null = null;
-
-        const handleScroll = () => {
-            if (rafId) return;
-
-            rafId = requestAnimationFrame(() => {
-                const rect = el.getBoundingClientRect();
-                const windowHeight = window.innerHeight;
-
-                const start = windowHeight - 150;
-                const end = windowHeight * 0.4;
-
-                const progress = 1 - Math.max(0, Math.min(1, (rect.top - end) / (start - end)));
-                setScrollProgress(progress);
-
-                // More sensitive change detection
-                const progressDiff = Math.abs(progress - lastProgressRef.current);
-
-                if (progressDiff > 0.005) {
-                    // Progress changed significantly - user is scrolling
-                    lastChangeTimeRef.current = Date.now();
-                    setIsPaused(false);
-                    if (pauseTimerRef.current) {
-                        clearTimeout(pauseTimerRef.current);
-                        pauseTimerRef.current = null;
-                    }
-                } else if (progress > 0.01 && progress < 0.99) {
-                    // Progress hasn't changed and we're mid-animation
-                    const timeSinceChange = Date.now() - lastChangeTimeRef.current;
-
-                    if (timeSinceChange > 500 && !isPaused) {
-                        // Been still for 500ms - start blinking
-                        setIsPaused(true);
-                    }
-                }
-
-                lastProgressRef.current = progress;
-                rafId = null;
-            });
-        };
-
-        handleScroll();
-        window.addEventListener('scroll', handleScroll, {passive: true});
-        window.addEventListener('resize', handleScroll, {passive: true});
-
-        // Check pause state periodically
-        const intervalId = setInterval(() => {
-            const timeSinceChange = Date.now() - lastChangeTimeRef.current;
-            const progress = lastProgressRef.current;
-
-            if (timeSinceChange > 500 && progress > 0.01 && progress < 0.99 && !isPaused) {
-                setIsPaused(true);
-            }
-        }, 100);
-
-        return () => {
-            window.removeEventListener('scroll', handleScroll);
-            window.removeEventListener('resize', handleScroll);
-            clearInterval(intervalId);
-            if (rafId) cancelAnimationFrame(rafId);
-            if (pauseTimerRef.current) clearTimeout(pauseTimerRef.current);
-        };
-    }, [isPaused]);
-
-    return {scrollProgress, isPaused};
-}
-// NEW: Time-based typewriter that "chases" scroll target
-function useTimedTypewriter(targetCharCount: number, charDelay: number = 50) {
-    const [actualCharCount, setActualCharCount] = React.useState(0);
-    const lastTargetRef = React.useRef(0);
-    const intervalRef = React.useRef<number | null>(null);
-
-    React.useEffect(() => {
-        if (intervalRef.current) {
-            clearInterval(intervalRef.current);
-            intervalRef.current = null;
-        }
-
-        if (actualCharCount === targetCharCount) {
-            lastTargetRef.current = targetCharCount;
-            return;
-        }
-
-        // DETECT DIRECTION
-        const isTyping = targetCharCount > actualCharCount;
-        const isUntyping = targetCharCount < actualCharCount;
-
-        // Untyping is 2x faster
-        const delay = isUntyping ? charDelay / 2 : charDelay;
-
-        intervalRef.current = window.setInterval(() => {
-            setActualCharCount(current => {
-                // Moving toward target
-                if (isTyping && current >= targetCharCount) {
-                    if (intervalRef.current) clearInterval(intervalRef.current);
-                    return targetCharCount;
-                }
-                if (isUntyping && current <= targetCharCount) {
-                    if (intervalRef.current) clearInterval(intervalRef.current);
-                    return targetCharCount;
-                }
-
-                // Step one character in the right direction
-                return isTyping ? current + 1 : current - 1;
-            });
-        }, delay);
-
-        lastTargetRef.current = targetCharCount;
-
-        return () => {
-            if (intervalRef.current) clearInterval(intervalRef.current);
-        };
-    }, [targetCharCount, charDelay, actualCharCount]);
-
-    return actualCharCount;
-}
 
 // ==================== STYLES ====================
 const styles = `
@@ -316,96 +188,8 @@ const styles = `
     padding: 0;
 }
 
-.tl-header,
-.tl-plot {
-    width: 100%;
-}
 
 .tl-plot { position: relative;}
-
-.tl-header {
-    position: relative;
-    margin: 0;
-    pointer-events: none;
-}
-
-.tl-header-spine {
-    position: absolute;
-    top: -100vh; /* CHANGED: Extend upward */
-    bottom: 0;
-    width: 1px;
-    background: rgba(255,255,255,0.16);
-    pointer-events: none;
-}
-
-.tl-header-title {
-    position: absolute;
-    left: 20px;
-    bottom: 6px;
-    margin: 0;
-    font: 700 clamp(40px, 6vw, 84px)/0.95 "Rajdhani", monospace;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: rgba(255,255,255,0.88);
-    margin-top: -0.1em;
-}
-/* NEW: Typewriter animation */
-.tl-header-title-line {
-    display: block;
-    overflow: hidden;
-    white-space: nowrap;
-}
-
-.tl-header-title-char {
-    display: inline-block;
-    opacity: 0;
-}
-
-.tl-header-title-char--visible {
-    opacity: 1;
-    /* No transition - instant appearance */
-}
-
-/* Cursor - only visible at the current typing position */
-.tl-header-cursor {
-    display: inline-block;
-    width: 3px;
-    height: 0.9em;
-    background: rgba(255, 255, 255, 0.9);
-    margin-left: 4px;
-    vertical-align: middle;
-    opacity: 0;
-}
-
-.tl-header-cursor--typing {
-    opacity: 1;
-    animation: none; /* Solid while typing */
-}
-
-.tl-header-cursor--paused {
-    opacity: 1;
-    animation: tlCursorBlink 0.8s step-end infinite;
-}
-
-.tl-header-cursor--complete {
-    opacity: 1;
-    animation: tlCursorBlink 0.8s step-end 4, tlCursorFadeOut 0.6s ease-out 2.5s forwards;
-}
-
-@keyframes tlCursorBlink {
-    0%, 50% { opacity: 1; }
-    51%, 100% { opacity: 0; }
-}
-
-@keyframes tlCursorFadeOut {
-    to { opacity: 0; }
-}
-
-.tl-header-emphasis {
-    color: #FFD447;
-    font-size: 1.14em;
-    display: block;
-}
 
 .tl-line {
     height: 1px;
@@ -867,7 +651,7 @@ type Props = {
 
 export default function ProgressTimeline({
                                              events = filipRealEvents,
-                                             height = 425,
+                                             height = 650,
                                              baseYearWidth,
                                              expandedFactor = 4.2,
                                              className,
@@ -885,7 +669,6 @@ export default function ProgressTimeline({
     } = LAYOUT_CONFIG;
 
     const containerRef = React.useRef<HTMLDivElement>(null);
-    const headerRef = React.useRef<HTMLDivElement>(null);
     const widthsRef = React.useRef<Float64Array>(new Float64Array(TOTAL_YEARS));
     const gapRef = React.useRef<number>(BASE_GAP);
     const hoverRAF = React.useRef<number | null>(null);
@@ -923,26 +706,7 @@ export default function ProgressTimeline({
     const TEASER_EVENT_LEVEL = 4.8; // Actual level of Sydney achievement
 
     const {showHint, onInteraction, toggleHint} = useHintVisibility();
-    const titleLines = ['Every Lesson.', 'Every Pivot.', 'Every Win.'];
-    const {scrollProgress: typewriterProgress, isPaused} = useScrollTypewriter(headerRef);
 
-// Calculate TARGET characters based on scroll progress
-    const totalChars = titleLines.reduce((sum, line) => sum + line.length, 0);
-    const targetCharCount = Math.floor(typewriterProgress * totalChars);
-
-// ACTUAL characters typed (chases target with time delay)
-    const actualCharCount = useTimedTypewriter(targetCharCount, 50); // 50ms per character
-
-    const visibleChars = React.useMemo(() => {
-        let remaining = actualCharCount; // CHANGED: Use actualCharCount instead
-        return titleLines.map(line => {
-            const lineChars = Math.min(line.length, Math.max(0, remaining));
-            remaining -= line.length;
-            return lineChars;
-        });
-    }, [actualCharCount, titleLines]); // CHANGED: Depend on actualCharCount
-
-    const complete = typewriterProgress >= 0.99;
 
     const focusedYear = activeYear ?? hoverYear;
     const targetGap = focusedYear >= 0 ? EXPANDED_GAP : BASE_GAP;
@@ -1371,55 +1135,6 @@ export default function ProgressTimeline({
                 aria-label="Progress timeline"
             >
                 <div className="tl-rail">
-                    <div className="tl-header" style={{height: HEADER_SPACE}} aria-hidden="true" ref={headerRef}>
-                        <div className="tl-header-spine"/>
-                        <h1 className="tl-header-title">
-                            {titleLines.map((line, lineIdx) => {
-                                const chars = line.split('');
-                                const visibleCount = visibleChars[lineIdx];
-
-                                const isActivelyTyping = visibleCount > 0 && visibleCount < chars.length;
-                                const isLineComplete = visibleCount >= chars.length;
-                                const isFinalLine = lineIdx === titleLines.length - 1;
-
-                                return (
-                                    <span
-                                        key={lineIdx}
-                                        className={clsx(
-                                            'tl-header-title-line',
-                                            lineIdx === 2 && 'tl-header-emphasis tl-header-gold'
-                                        )}
-                                    >
-                {chars.map((char, charIdx) => (
-                    <React.Fragment key={charIdx}>
-                        <span
-                            className={clsx(
-                                'tl-header-title-char',
-                                charIdx < visibleCount && 'tl-header-title-char--visible'
-                            )}
-                        >
-                            {char === ' ' ? '\u00A0' : char}
-                        </span>
-                        {/* Show cursor RIGHT AFTER this character if it's the last visible one */}
-                        {isActivelyTyping && charIdx === visibleCount - 1 && (
-                            <span
-                                className={clsx(
-                                    'tl-header-cursor',
-                                    isPaused ? 'tl-header-cursor--paused' : 'tl-header-cursor--typing'
-                                )}
-                            />
-                        )}
-                    </React.Fragment>
-                ))}
-                                        {/* Cursor at end when line complete (only on final line) */}
-                                        {isLineComplete && isFinalLine && complete && (
-                                            <span className="tl-header-cursor tl-header-cursor--complete" />
-                                        )}
-            </span>
-                                );
-                            })}
-                        </h1>
-                    </div>
 
                     <div className="tl-line tl-line--top" aria-hidden="true"/>
 
