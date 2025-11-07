@@ -5,11 +5,14 @@ import React from 'react';
 type VideoItem = {
     id: string;
     title: string;
-    source: string; // e.g. "TECHCONF"
-    date: string;   // e.g. "2024-11"
-    url: string;
-    year?: number;  // we’ll surface year in the caption bar like projects
+    source: string;
+    date: string;
+    url: string;        // keep your YouTube (if you need it elsewhere)
+    vimeoUrl?: string;  // NEW: vimeo link for this card
+    year?: number;
 };
+
+const DEFAULT_VIMEO_URL = 'https://vimeo.com/1132746110';
 
 const VIDEOS: VideoItem[] = [
     {
@@ -19,6 +22,7 @@ const VIDEOS: VideoItem[] = [
         date: '2024-11',
         year: 2024,
         url: 'https://youtube.com/watch?v=AAAA',
+        vimeoUrl: DEFAULT_VIMEO_URL,
     },
     {
         id: 'b',
@@ -27,6 +31,7 @@ const VIDEOS: VideoItem[] = [
         date: '2024-06',
         year: 2024,
         url: 'https://youtube.com/watch?v=BBBB',
+        vimeoUrl: DEFAULT_VIMEO_URL,
     },
     {
         id: 'c',
@@ -35,6 +40,7 @@ const VIDEOS: VideoItem[] = [
         date: '2024-03',
         year: 2024,
         url: 'https://youtube.com/watch?v=CCCC',
+        vimeoUrl: DEFAULT_VIMEO_URL,
     },
     {
         id: 'd',
@@ -43,6 +49,7 @@ const VIDEOS: VideoItem[] = [
         date: '2023-12',
         year: 2023,
         url: 'https://youtube.com/watch?v=DDDD',
+        vimeoUrl: DEFAULT_VIMEO_URL,
     },
     {
         id: 'e',
@@ -51,8 +58,15 @@ const VIDEOS: VideoItem[] = [
         date: '2023-07',
         year: 2023,
         url: 'https://youtube.com/watch?v=EEEE',
+        vimeoUrl: DEFAULT_VIMEO_URL,
     },
 ];
+
+const getVimeoId = (url: string | undefined) => {
+    if (!url) return '';
+    const match = url.match(/vimeo\.com\/(\d+)/);
+    return match ? match[1] : '';
+};
 
 export default function Recognition() {
     /* ---------------------------------
@@ -67,17 +81,18 @@ export default function Recognition() {
         return () => window.removeEventListener('resize', onR);
     }, []);
 
-    // same responsive gutters we’ve been using
     const INSET = vw <= 640 ? 40 : vw <= 1024 ? 60 : 100;
-    const TITLE_OFFSET = 40;
+
+    const NAV_SIZE = 32;
+    const HEADER_PAD = 12;
 
     // cage constants
-    const TOP_Y = 200;
+    const TOP_Y = NAV_SIZE + HEADER_PAD * 2;
     const EXTRA_BOTTOM_SPACE = 200;
     const MID_RATIO = 0.5;
-    const CAP_OFFSET = 60;
+    const CAP_OFFSET = TOP_Y;
 
-    // frame aspect ratio 16:11 (the outer cage box, not the video)
+    // approximate aspect
     const ASPECT_W = 16;
     const ASPECT_H = 11;
 
@@ -86,16 +101,29 @@ export default function Recognition() {
     const xR = Math.max(INSET, vw - INSET);
     const xM = xL + (xR - xL) * MID_RATIO;
 
-    // frame width and height
+    // frame width
     const frameWidth = xM - xL;
-    const frameHeight = frameWidth * (ASPECT_H / ASPECT_W);
+
+    /* ---------------------------------
+       card size + dynamic frame height
+    --------------------------------- */
+    const CARD_SCALE = 0.92;
+    const cardOuterW = frameWidth * CARD_SCALE;
+    const sideGap = (frameWidth - cardOuterW) / 2;
+    const cardOffsetX = sideGap;
+
+    const guessedCardHeight = frameWidth * (ASPECT_H / ASPECT_W) + 64;
+    const [measuredCardH, setMeasuredCardH] = React.useState<number | null>(null);
+    const cardHeight = measuredCardH ?? guessedCardHeight;
+
+    const frameHeight = cardHeight + sideGap * 2;
+    const verticalPadding = sideGap;
 
     // y coords
     const yTop = TOP_Y;
     const yBottom = yTop + frameHeight;
-    const yCap = yTop - CAP_OFFSET;
+    const yCap = yTop - CAP_OFFSET; // = 0
 
-    // svg total height to reserve space
     const svgHeight = yBottom + EXTRA_BOTTOM_SPACE;
 
     /* ---------------------------------
@@ -112,34 +140,6 @@ export default function Recognition() {
         setCurrentSlide((i) => (i === total - 1 ? 0 : i + 1));
     };
 
-    // helper to loop indices
-    const wrapIndex = (idx: number) => {
-        const m = idx % total;
-        return m < 0 ? m + total : m;
-    };
-
-    /* ---------------------------------
-       scroll-trigger title reveal
-    --------------------------------- */
-    const sectionRef = React.useRef<HTMLElement | null>(null);
-    const [titleVisible, setTitleVisible] = React.useState(false);
-
-    React.useEffect(() => {
-        const el = sectionRef.current;
-        if (!el) return;
-
-        const onScroll = () => {
-            const r = el.getBoundingClientRect();
-            if (r.top < window.innerHeight * 0.8) {
-                setTitleVisible(true);
-            }
-        };
-
-        window.addEventListener('scroll', onScroll, { passive: true });
-        onScroll();
-        return () => window.removeEventListener('scroll', onScroll);
-    }, []);
-
     /* ---------------------------------
        header band geometry
     --------------------------------- */
@@ -147,831 +147,787 @@ export default function Recognition() {
     const headerY = yCap;
     const headerW = frameWidth;
     const headerH = yTop - yCap;
-    const headerPadX = 16;
-    const headerPadY = 8;
-
-    /* ---------------------------------
-       title positioning
-    --------------------------------- */
-    // sit the big title halfway between top of section (0) and yCap
-    const titleLeft = xL + TITLE_OFFSET;
-    const titleTop = yCap / 2;
-
-    /* ---------------------------------
-       card sizing inside frame
-    --------------------------------- */
-    // cards scale to 90% of cage, centered
-    const CARD_SCALE = 0.9;
-    const cardOuterW = frameWidth * CARD_SCALE;
-    const cardOuterH = frameHeight * CARD_SCALE;
-    const cardOffsetX = (frameWidth - cardOuterW) / 2;
-    const cardOffsetY = (frameHeight - cardOuterH) / 2;
+    const headerPadX = HEADER_PAD;
+    const headerPadY = HEADER_PAD;
 
     /* ---------------------------------
        viewport / track geometry
     --------------------------------- */
-    // we widen viewport to 3 * frameWidth.
-    // that gives:
-    // - left peek of previous
-    // - first full (current)
-    // - second full (next)
-    // - third mostly full (next+1)
-    // - start of next+2 creeping in
-    const viewportW = frameWidth * 3;
-
-    // full carousel track is all videos in some logical loop order
+    const viewportW = frameWidth * 2.2;
     const trackW = frameWidth * total;
+    const trackTranslateX = currentSlide * frameWidth;
 
-    // how far to shift the track:
-    // we place cards in a circular order so "slot 1" = current,
-    // "slot 2" = next, etc.
-    //
-    // we want current (slot 1) a little bit from the left edge of viewport
-    // so we can ALSO see previous (slot 0) peeking.
-    //
-    // we do `(currentSlide + 1) * frameWidth`
-    //  -> slot0 (prev) ends up slightly visible on the far left,
-    //     slot1 (current) lands in the first full cage,
-    //     slot2 (next) in second cage,
-    //     slot3 (next+1) mostly visible,
-    //     slot4 (next+2) begins to creep.
-    const trackTranslateX = (currentSlide + 1) * frameWidth;
+    // card measurement ref
+    const mainCardRef = React.useRef<HTMLElement | null>(null);
+
+    React.useLayoutEffect(() => {
+        const el = mainCardRef.current;
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+        const h = rect.height;
+        setMeasuredCardH((prev) =>
+            prev === null || Math.abs(prev - h) > 2 ? h : prev
+        );
+    }, [currentSlide, vw]);
 
     /* ---------------------------------
-       slot mapping
+       video hover + fullscreen state
     --------------------------------- */
-    // we want visual slots in this loop order:
-    //   slot 0  = currentSlide - 1   (previous teaser left)
-    //   slot 1  = currentSlide       (current, fully visible / clickable)
-    //   slot 2  = currentSlide + 1   (next, fully visible / clickable)
-    //   slot 3  = currentSlide + 2   (next+1, mostly visible teaser on right)
-    //   slot 4  = currentSlide + 3   (next+2, creeping in far right)
-    //
-    // to make that happen for each raw index, we assign it a "slot"
-    // relative to currentSlide. logic below does this.
+    const [hoveredVideoId, setHoveredVideoId] = React.useState<string | null>(
+        null,
+    );
+    const [isFullscreen, setIsFullscreen] = React.useState(false);
+    const [fullscreenVimeoId, setFullscreenVimeoId] = React.useState<string | null>(
+        null,
+    );
+    const fullscreenIframeRef = React.useRef<HTMLIFrameElement | null>(null);
+
+    // fullscreen body lock + Vimeo "ended" listener
+    React.useEffect(() => {
+        const setupVimeoListener = () => {
+            if (fullscreenIframeRef.current && window.Vimeo) {
+                const player = new window.Vimeo.Player(fullscreenIframeRef.current);
+                player.on('ended', () => {
+                    setIsFullscreen(false);
+                });
+            }
+        };
+
+        if (isFullscreen && fullscreenVimeoId) {
+            // lock scroll
+            const scrollY = window.scrollY;
+            document.body.style.position = 'fixed';
+            document.body.style.top = `-${scrollY}px`;
+            document.body.style.left = '0';
+            document.body.style.right = '0';
+            document.body.style.overflow = 'hidden';
+
+            // load Vimeo API if needed
+            if (!window.Vimeo) {
+                const script = document.createElement('script');
+                script.src = 'https://player.vimeo.com/api/player.js';
+                script.onload = () => setupVimeoListener();
+                document.body.appendChild(script);
+            } else {
+                setupVimeoListener();
+            }
+        } else {
+            // restore scroll position
+            const top = document.body.style.top;
+            document.body.style.position = '';
+            document.body.style.top = '';
+            document.body.style.left = '';
+            document.body.style.right = '';
+            document.body.style.overflow = '';
+            if (top) {
+                const scrollY = parseInt(top || '0', 10) * -1;
+                if (!Number.isNaN(scrollY)) window.scrollTo(0, scrollY);
+            }
+        }
+
+        const handleEsc = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && isFullscreen) {
+                setIsFullscreen(false);
+            }
+        };
+        document.addEventListener('keydown', handleEsc);
+
+        return () => {
+            document.removeEventListener('keydown', handleEsc);
+            document.body.style.position = '';
+            document.body.style.top = '';
+            document.body.style.left = '';
+            document.body.style.right = '';
+            document.body.style.overflow = '';
+        };
+    }, [isFullscreen, fullscreenVimeoId]);
 
     return (
-        <section ref={sectionRef} className="recog-wrap">
-            {/* ===================== STATIC GRID LINES ===================== */}
-            <svg
-                className="gridSvg"
-                width={vw}
-                height={svgHeight}
-                style={{ height: svgHeight }}
-            >
-                {/* left spine (0 -> bottom of cage) */}
-                <line
-                    x1={xL}
-                    y1={0}
-                    x2={xL}
-                    y2={yBottom}
-                    className="gridLine"
-                />
+        <>
+            <section className="recog-wrap">
+                {/* ===================== STATIC GRID LINES ===================== */}
+                <svg
+                    className="gridSvg"
+                    width={vw}
+                    height={svgHeight}
+                    style={{ height: svgHeight }}
+                >
+                    <line
+                        x1={xM}
+                        y1={yTop}
+                        x2={xM}
+                        y2={yBottom}
+                        className="gridLine"
+                    />
+                    <line
+                        x1={xR}
+                        y1={yTop}
+                        x2={xR}
+                        y2={svgHeight}
+                        className="gridLine"
+                    />
+                    <line
+                        x1={xL}
+                        y1={yTop}
+                        x2={vw}
+                        y2={yTop}
+                        className="gridLine"
+                    />
+                    <line
+                        x1={xL}
+                        y1={yBottom}
+                        x2={vw}
+                        y2={yBottom}
+                        className="gridLine"
+                    />
+                    <line
+                        x1={xL}
+                        y1={yCap}
+                        x2={xM}
+                        y2={yCap}
+                        className="gridLine"
+                    />
+                    <line
+                        x1={xM}
+                        y1={yCap}
+                        x2={xM}
+                        y2={yTop}
+                        className="gridLine"
+                    />
+                </svg>
 
-                {/* middle spine (just cage vertical split) */}
-                <line
-                    x1={xM}
-                    y1={yTop}
-                    x2={xM}
-                    y2={yBottom}
-                    className="gridLine"
-                />
-
-                {/* far right spine continues all the way down */}
-                <line
-                    x1={xR}
-                    y1={yTop}
-                    x2={xR}
-                    y2={svgHeight}
-                    className="gridLine"
-                />
-
-                {/* cage horizontal lines stretching to the viewport right edge */}
-                <line
-                    x1={xL}
-                    y1={yTop}
-                    x2={vw}
-                    y2={yTop}
-                    className="gridLine"
-                />
-                <line
-                    x1={xL}
-                    y1={yBottom}
-                    x2={vw}
-                    y2={yBottom}
-                    className="gridLine"
-                />
-
-                {/* header band lines above cage */}
-                <line
-                    x1={xL}
-                    y1={yCap}
-                    x2={xM}
-                    y2={yCap}
-                    className="gridLine"
-                />
-                <line
-                    x1={xM}
-                    y1={yCap}
-                    x2={xM}
-                    y2={yTop}
-                    className="gridLine"
-                />
-            </svg>
-
-            {/* ===================== BIG TITLE ===================== */}
-            <div
-                className={`recog-titleWrap ${titleVisible ? 'visible' : ''}`}
-                style={{
-                    left: titleLeft,
-                    top: titleTop,
-                    transform: 'translateY(-50%)',
-                }}
-            >
-                <h2 className="recog-title">
-                    <span className="recog-title-line">
-                        <span className="recog-title-word">Press</span>{' '}
-                        <span className="recog-title-word">&</span>{' '}
-                        <span className="recog-title-word">Recognition</span>
-                    </span>
-                </h2>
-            </div>
-
-            {/* ===================== HEADER BAND (COUNTER + NAV) ===================== */}
-            <div
-                className="headerBand"
-                style={{
-                    left: headerX,
-                    top: headerY,
-                    width: headerW,
-                    height: headerH,
-                }}
-            >
+                {/* ===================== HEADER BAND ===================== */}
                 <div
-                    className="bandInner"
+                    className="headerBand"
                     style={{
-                        padding: `${headerPadY}px ${headerPadX}px`,
+                        left: headerX,
+                        top: headerY,
+                        width: headerW,
+                        height: headerH,
                     }}
                 >
-                    <div className="counterBlock">
-                        <span className="counterText">
-                            [{String(currentSlide + 1).padStart(2, '0')}/
-                            {String(total).padStart(2, '0')}]
-                        </span>
-                    </div>
-
-                    <div className="navBlock">
-                        <button
-                            className="navBtn"
-                            onClick={prev}
-                            aria-label="Previous"
-                        >
-                            <span className="navBtnInner">
-                                <svg
-                                    width="20"
-                                    height="20"
-                                    viewBox="0 0 24 24"
-                                    className="chevronIcon"
-                                >
-                                    <path
-                                        d="M14 7L9 12L14 17"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        strokeWidth="1.5"
-                                        strokeLinecap="square"
-                                        strokeLinejoin="miter"
-                                        vectorEffect="non-scaling-stroke"
-                                    />
-                                </svg>
+                    <div
+                        className="bandInner"
+                        style={{
+                            padding: `${headerPadY}px ${headerPadX}px`,
+                        }}
+                    >
+                        <div className="counterBlock">
+                            <span className="counterText">
+                                [{String(currentSlide + 1).padStart(2, '0')}/
+                                {String(total).padStart(2, '0')}]
                             </span>
-                        </button>
+                        </div>
 
-                        <button
-                            className="navBtn"
-                            onClick={next}
-                            aria-label="Next"
-                        >
-                            <span className="navBtnInner">
-                                <svg
-                                    width="20"
-                                    height="20"
-                                    viewBox="0 0 24 24"
-                                    className="chevronIcon"
-                                >
-                                    <path
-                                        d="M10 7L15 12L10 17"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        strokeWidth="1.5"
-                                        strokeLinecap="square"
-                                        strokeLinejoin="miter"
-                                        vectorEffect="non-scaling-stroke"
-                                    />
-                                </svg>
-                            </span>
-                        </button>
+                        <div className="navBlock">
+                            <button
+                                className="navBtn"
+                                onClick={prev}
+                                aria-label="Previous"
+                            >
+                                <span className="navBtnInner">
+                                    <svg
+                                        width={NAV_SIZE - 12}
+                                        height={NAV_SIZE - 12}
+                                        viewBox="0 0 24 24"
+                                        className="chevronIcon"
+                                    >
+                                        <path
+                                            d="M14 7L9 12L14 17"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="1.5"
+                                            strokeLinecap="square"
+                                            strokeLinejoin="miter"
+                                            vectorEffect="non-scaling-stroke"
+                                        />
+                                    </svg>
+                                </span>
+                            </button>
+
+                            <button
+                                className="navBtn"
+                                onClick={next}
+                                aria-label="Next"
+                            >
+                                <span className="navBtnInner">
+                                    <svg
+                                        width={NAV_SIZE - 12}
+                                        height={NAV_SIZE - 12}
+                                        viewBox="0 0 24 24"
+                                        className="chevronIcon"
+                                    >
+                                        <path
+                                            d="M10 7L15 12L10 17"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="1.5"
+                                            strokeLinecap="square"
+                                            strokeLinejoin="miter"
+                                            vectorEffect="non-scaling-stroke"
+                                        />
+                                    </svg>
+                                </span>
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            {/* ===================== CAROUSEL VIEWPORT ===================== */}
-            <div
-                className="carouselViewport"
-                style={{
-                    left: xL,
-                    top: yTop,
-                    width: viewportW,
-                    height: frameHeight,
-                }}
-            >
-                {/* moving belt */}
+                {/* ===================== CAROUSEL VIEWPORT ===================== */}
                 <div
-                    className="carouselTrack"
+                    className="carouselViewport"
                     style={{
-                        width: trackW,
+                        left: xL,
+                        top: yTop,
+                        width: viewportW,
                         height: frameHeight,
-                        transform: `translateX(-${trackTranslateX}px)`,
                     }}
                 >
-                    {VIDEOS.map((vid, rawIndex) => {
-                        // figure out which "slot" this vid should occupy visually
-                        // relative to currentSlide
-                        // delta from current
-                        const delta = rawIndex - currentSlide;
-                        // slotIndex = delta + 1 (so currentSlide => slot 1)
-                        let slot = delta + 1;
-                        if (slot < 0) slot += total;
-                        if (slot >= total) slot -= total;
+                    <div
+                        className="carouselTrack"
+                        style={{
+                            width: trackW,
+                            height: '100%',
+                            transform: `translateX(-${trackTranslateX}px)`,
+                        }}
+                    >
+                        {VIDEOS.map((vid, rawIndex) => {
+                            const frameLeft = rawIndex * frameWidth;
+                            const isClickable =
+                                rawIndex === currentSlide ||
+                                rawIndex === (currentSlide + 1) % total;
+                            const indexLabel = String(rawIndex + 1).padStart(2, '0');
+                            const isMain = rawIndex === currentSlide;
 
-                        // horizontal position of this slot in the track
-                        const frameLeft = slot * frameWidth;
+                            const vimeoId =
+                                getVimeoId(vid.vimeoUrl) ||
+                                getVimeoId(DEFAULT_VIMEO_URL);
 
-                        // clickable if slot === 1 (current full) or slot === 2 (next full)
-                        const isClickable = slot === 1 || slot === 2;
+                            return (
+                                <article
+                                    key={vid.id + '-' + rawIndex}
+                                    ref={isMain ? (mainCardRef as React.RefObject<HTMLElement>) : undefined}
+                                    className={`videoCard ${
+                                        isClickable ? 'clickable' : 'teaser'
+                                    }`}
+                                    style={{
+                                        left: frameLeft + cardOffsetX,
+                                        top: verticalPadding,
+                                        width: cardOuterW,
+                                    }}
+                                    onMouseEnter={() => setHoveredVideoId(vid.id)}
+                                    onMouseLeave={() =>
+                                        setHoveredVideoId((prev) =>
+                                            prev === vid.id ? null : prev,
+                                        )
+                                    }
+                                    onClick={() => {
+                                        if (!vimeoId) return;
+                                        setFullscreenVimeoId(vimeoId);
+                                        setIsFullscreen(true);
+                                    }}
+                                >
+                                    {/* caption bar */}
+                                    <div className="cardCaption">
+                                        <span className="capIndex">
+                                            [{indexLabel}]
+                                        </span>
+                                        {typeof vid.year === 'number' && (
+                                            <>
+                                                <span className="capDot" />
+                                                <span className="capYear">
+                                                    {vid.year}
+                                                </span>
+                                            </>
+                                        )}
+                                    </div>
 
-                        // label numbering for caption like projects:
-                        // we'll take rawIndex (0-based) and show [01], [02], etc.
-                        const indexLabel = String(rawIndex + 1).padStart(
-                            2,
-                            '0'
-                        );
+                                    {/* title row */}
+                                    <div className="cardTitleRow">
+                                        <h3 className="cardTitle">{vid.title}</h3>
+                                    </div>
 
-                        return (
-                            <article
-                                key={vid.id + '-' + rawIndex}
-                                className={`videoCard ${
-                                    isClickable ? 'clickable' : 'teaser'
-                                }`}
-                                style={{
-                                    left: frameLeft + cardOffsetX,
-                                    top: cardOffsetY,
-                                    width: cardOuterW,
-                                    height: cardOuterH,
-                                }}
-                                onClick={
-                                    isClickable
-                                        ? () => {
-                                            console.log(
-                                                'OPEN VIDEO:',
-                                                vid.url
-                                            );
-                                        }
-                                        : undefined
-                                }
-                            >
-                                {/* ===== caption bar (like .caption in Projects) ===== */}
-                                <div className="cardCaption">
-                                    <span className="capIndex">
-                                        [{indexLabel}]
-                                    </span>
-                                    {typeof vid.year === 'number' && (
-                                        <>
-                                            <span className="capDot" />
-                                            <span className="capYear">
-                                                {vid.year}
-                                            </span>
-                                        </>
-                                    )}
+                                    {/* VIDEO VISUAL – looping background Vimeo */}
+                                    <div className="videoVisual">
+                                        {vimeoId && (
+                                            <iframe
+                                                title={`${vid.title} background`}
+                                                src={`https://player.vimeo.com/video/${vimeoId}?background=1&autoplay=1&loop=1&autopause=0&muted=1`}
+                                                allow="autoplay; fullscreen; picture-in-picture"
+                                                style={{
+                                                    position: 'absolute',
+                                                    inset: 0,
+                                                    width: '100%',
+                                                    height: '100%',
+                                                    border: 'none',
+                                                    display: 'block',
+                                                    pointerEvents: 'none',
+                                                }}
+                                            />
+                                        )}
 
-                                    {/* little "close-ish" icon group top-right (like lightbox close vibe) */}
-                                    <button
-                                        className="miniClose"
-                                        tabIndex={-1}
-                                        aria-hidden="true"
-                                    >
-                                        <span className="miniCloseLine" />
-                                        <span className="miniCloseLine" />
-                                    </button>
-                                </div>
+                                        {/* Play overlay */}
+                                        <div
+                                            className={
+                                                hoveredVideoId === vid.id
+                                                    ? 'playOverlay visible'
+                                                    : 'playOverlay'
+                                            }
+                                        >
+                                            <svg
+                                                className="playIcon"
+                                                viewBox="0 0 100 100"
+                                                xmlns="http://www.w3.org/2000/svg"
+                                            >
+                                                <defs>
+                                                    <filter id="softGlow-recog">
+                                                        <feGaussianBlur
+                                                            stdDeviation="2"
+                                                            result="coloredBlur"
+                                                        />
+                                                        <feMerge>
+                                                            <feMergeNode in="coloredBlur" />
+                                                            <feMergeNode in="SourceGraphic" />
+                                                        </feMerge>
+                                                    </filter>
+                                                </defs>
+                                                <path
+                                                    d="M 32 19
+                                                       Q 27.91 17.68 25 21
+                                                       L 25 79
+                                                       Q 27.91 82.32 32 81
+                                                       L 85 52.5
+                                                       Q 88 50 85 47.5
+                                                       Z"
+                                                    fill="white"
+                                                    opacity="0.9"
+                                                    filter="url(#softGlow-recog)"
+                                                />
+                                            </svg>
+                                        </div>
+                                    </div>
 
-                                {/* ===== title row (like .p-title in Projects) ===== */}
-                                <h3 className="cardTitle">{vid.title}</h3>
-
-                                {/* ===== VIDEO VISUAL (16:9 area) ===== */}
-                                <div className="videoVisual">
-                                    <div className="videoPlaceholder">
-                                        <span className="phText">
-                                            16:9 VIDEO
+                                    {/* footer – source tag only */}
+                                    <div className="cardFooter">
+                                        <span className="videoSourceTag">
+                                            {vid.source}
                                         </span>
                                     </div>
-                                </div>
-
-                                {/* ===== FOOTER META ROW ===== */}
-                                <div className="cardFooter">
-                                    <span className="videoSourceTag">
-                                        {vid.source}
-                                    </span>
-                                    <span className="videoDateText">
-                                        {vid.date}
-                                    </span>
-                                </div>
-                            </article>
-                        );
-                    })}
+                                </article>
+                            );
+                        })}
+                    </div>
                 </div>
-            </div>
 
-            {/* spacer so content below this section doesn't overlap absolute stuff */}
-            <div style={{ height: svgHeight }} />
+                <div style={{ height: svgHeight }} />
 
-            <style jsx>{`
-                .recog-wrap {
-                    position: relative;
-                    background: transparent;
-                    color: #fff;
-                    padding-top: 40px;
-                    padding-bottom: 80px;
-                    overflow-x: hidden;
-                    font-family: 'Rajdhani', monospace;
-                }
+                <style jsx>{`
+                    @keyframes fadeInRecognition {
+                        from {
+                            opacity: 0;
+                        }
+                        to {
+                            opacity: 1;
+                        }
+                    }
 
-                /* GRID LINES */
-                .gridSvg {
-                    position: absolute;
-                    left: 0;
-                    top: 0;
-                    pointer-events: none;
-                    display: block;
-                    overflow: visible;
-                    z-index: 0;
-                }
-                .gridLine {
-                    stroke: rgba(255, 255, 255, 0.12);
-                    stroke-width: 1;
-                    shape-rendering: crispEdges;
-                }
+                    .recog-wrap {
+                        position: relative;
+                        background: transparent;
+                        color: #fff;
+                        padding-bottom: 80px;
+                        overflow-x: hidden;
+                        font-family: 'Rajdhani', monospace;
+                        margin: 0;
+                    }
 
-                /* TITLE */
-                .recog-titleWrap {
-                    position: absolute;
-                    z-index: 5;
-                    pointer-events: none;
-                    overflow: hidden;
-                }
-                .recog-title {
-                    margin: 0;
-                    font-weight: 700;
-                    font-family: 'Rajdhani', monospace;
-                    font-size: clamp(36px, 5.5vw, 76px);
-                    line-height: 0.95;
-                    letter-spacing: 0.08em;
-                    text-transform: uppercase;
-                    color: rgba(255, 255, 255, 0.88);
-                }
-                .recog-title-line {
-                    display: block;
-                    overflow: hidden;
-                }
-                .recog-title-word {
-                    display: inline-block;
-                    transform: translateY(100%);
-                    opacity: 0;
-                    transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1),
-                    opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1);
-                    position: relative;
-                }
-                .recog-title-word::after {
-                    content: '';
-                    position: absolute;
-                    bottom: -4px;
-                    left: 0;
-                    width: 0;
-                    height: 2px;
-                    background: rgba(255, 255, 255, 0.3);
-                    transition: width 0.5s ease;
-                }
-                .recog-titleWrap:hover .recog-title-word::after {
-                    width: 100%;
-                }
-                .recog-titleWrap.visible .recog-title-word {
-                    transform: translateY(0%);
-                    opacity: 1;
-                }
-                .recog-titleWrap.visible
-                .recog-title-word:nth-child(1) {
-                    transition-delay: 0.1s;
-                }
-                .recog-titleWrap.visible
-                .recog-title-word:nth-child(2) {
-                    transition-delay: 0.2s;
-                }
-                .recog-titleWrap.visible
-                .recog-title-word:nth-child(3) {
-                    transition-delay: 0.3s;
-                }
+                    .gridSvg {
+                        position: absolute;
+                        left: 0;
+                        top: 0;
+                        pointer-events: none;
+                        display: block;
+                        overflow: visible;
+                        z-index: 0;
+                    }
+                    .gridLine {
+                        stroke: rgba(255, 255, 255, 0.12);
+                        stroke-width: 1;
+                        shape-rendering: crispEdges;
+                    }
 
-                /* HEADER BAND (COUNTER + NAV) */
-                .headerBand {
-                    position: absolute;
-                    z-index: 10;
-                    pointer-events: none;
-                    display: flex;
-                }
-                .bandInner {
-                    position: relative;
-                    width: 100%;
-                    height: 100%;
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                    gap: 16px;
-                    pointer-events: auto;
-                }
+                    .headerBand {
+                        position: absolute;
+                        z-index: 10;
+                        pointer-events: none;
+                        display: flex;
+                    }
+                    .bandInner {
+                        position: relative;
+                        width: 100%;
+                        height: 100%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        gap: 16px;
+                        pointer-events: auto;
+                    }
 
-                .counterBlock {
-                    display: flex;
-                    align-items: center;
-                }
-                .counterText {
-                    font-family: 'Rajdhani', monospace;
-                    font-weight: 600;
-                    font-size: clamp(16px, 1.4vw, 20px);
-                    line-height: 1;
-                    letter-spacing: 0.16em;
-                    text-transform: uppercase;
-                    color: rgba(255, 255, 255, 0.85);
-                    text-shadow: 0 0 8px rgba(255, 255, 255, 0.22);
-                }
-
-                .navBlock {
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                }
-                .navBtn {
-                    appearance: none;
-                    background: rgba(0, 0, 0, 0.45);
-                    border: 1px solid rgba(255, 255, 255, 0.2);
-                    color: rgba(255, 255, 255, 0.7);
-                    width: 32px;
-                    height: 32px;
-                    padding: 0;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    cursor: pointer;
-                    position: relative;
-                    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.75);
-                    transition: border-color 0.3s
-                    cubic-bezier(0.16, 1, 0.3, 1),
-                    box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-                    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-                    color 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-                }
-                .navBtnInner {
-                    width: 100%;
-                    height: 100%;
-                    display: grid;
-                    place-items: center;
-                    transition: transform 0.3s
-                    cubic-bezier(0.16, 1, 0.3, 1);
-                }
-                .navBtn:hover {
-                    border-color: rgba(255, 255, 255, 0.8);
-                    color: rgba(255, 255, 255, 1);
-                    box-shadow: 0 0 12px
-                    rgba(255, 255, 255, 0.4),
-                    0 30px 60px rgba(0, 0, 0, 0.9);
-                    transform: translateY(-2px) scale(1.03);
-                }
-                .navBtn:hover .navBtnInner {
-                    transform: scale(1.07);
-                }
-                .navBtn:active {
-                    transform: scale(0.94);
-                    transition-duration: 0.1s;
-                }
-
-                @media (max-width: 640px) {
-                    .navBtn {
-                        width: 28px;
-                        height: 28px;
+                    .counterBlock {
+                        display: flex;
+                        align-items: center;
                     }
                     .counterText {
-                        font-size: 14px;
-                        letter-spacing: 0.14em;
+                        font-family: 'Rajdhani', monospace;
+                        font-weight: 600;
+                        font-size: clamp(16px, 1.4vw, 20px);
+                        line-height: 1;
+                        letter-spacing: 0.16em;
+                        text-transform: uppercase;
+                        color: rgba(255, 255, 255, 0.85);
+                        text-shadow: 0 0 8px rgba(255, 255, 255, 0.22);
                     }
-                }
 
-                /* CAROUSEL VIEWPORT */
-                .carouselViewport {
-                    position: absolute;
-                    z-index: 20;
-                    overflow: hidden;
-                    pointer-events: none; /* article handles its own click */
-                }
+                    .navBlock {
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                    }
+                    .navBtn {
+                        appearance: none;
+                        background: rgba(0, 0, 0, 0.45);
+                        border: 1px solid rgba(255, 255, 255, 0.2);
+                        color: rgba(255, 255, 255, 0.7);
+                        width: ${NAV_SIZE}px;
+                        height: ${NAV_SIZE}px;
+                        padding: 0;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        cursor: pointer;
+                        position: relative;
+                        box-shadow: 0 16px 32px rgba(0, 0, 0, 0.75);
+                        transition:
+                            border-color 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+                            box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+                            transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+                            color 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+                    }
+                    .navBtnInner {
+                        width: 100%;
+                        height: 100%;
+                        display: grid;
+                        place-items: center;
+                        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+                    }
+                    .navBtn:hover {
+                        border-color: rgba(255, 255, 255, 0.8);
+                        color: rgba(255, 255, 255, 1);
+                        box-shadow:
+                            0 0 12px rgba(255, 255, 255, 0.4),
+                            0 30px 60px rgba(0, 0, 0, 0.9);
+                        transform: translateY(-2px) scale(1.03);
+                    }
+                    .navBtn:hover .navBtnInner {
+                        transform: scale(1.07);
+                    }
+                    .navBtn:active {
+                        transform: scale(0.94);
+                        transition-duration: 0.1s;
+                    }
 
-                /* TRACK (belt of cards) */
-                .carouselTrack {
-                    position: absolute;
-                    left: 0;
-                    top: 0;
-                    display: block;
-                    transition: transform 0.9s
-                    cubic-bezier(0.16, 1, 0.3, 1); /* slowed down */
-                    will-change: transform;
-                }
+                    @media (max-width: 640px) {
+                        .navBtn {
+                            width: 28px;
+                            height: 28px;
+                        }
+                        .counterText {
+                            font-size: 14px;
+                            letter-spacing: 0.14em;
+                        }
+                    }
 
-                /* CARD (Project-style frame) */
-                .videoCard {
-                    position: absolute;
-                    display: flex;
-                    flex-direction: column;
-                    border: 1px solid
-                    rgba(255, 255, 255, 0.12);
-                    background: rgba(
-                            255,
-                            255,
-                            255,
-                            0.03
-                    ); /* subtle like projects */
-                    box-shadow: 0 32px 88px
-                    rgba(0, 0, 0, 0.7);
-                    overflow: hidden;
-                    transform-origin: center;
-                    transition: transform 140ms
-                    cubic-bezier(0.22, 1, 0.36, 1),
-                    box-shadow 140ms ease,
-                    border-color 120ms ease,
-                    background 120ms ease;
-                    pointer-events: auto;
-                }
+                    .carouselViewport {
+                        position: absolute;
+                        z-index: 20;
+                        overflow: hidden;
+                        pointer-events: none;
+                    }
 
-                /* cards fully in cage are clickable */
-                .videoCard.clickable {
-                    cursor: pointer;
-                }
+                    .carouselTrack {
+                        position: absolute;
+                        left: 0;
+                        top: 0;
+                        display: block;
+                        transition: transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+                        will-change: transform;
+                        pointer-events: auto;
+                    }
 
-                /* peeking cards still hover-scale but aren’t clickable */
-                .videoCard.teaser {
-                    cursor: default;
-                }
+                    .videoCard {
+                        position: absolute;
+                        display: flex;
+                        flex-direction: column;
+                        border: 1px solid rgba(255, 255, 255, 0.12);
+                        background: rgba(0, 0, 0, 0.9);
+                        box-shadow: 0 32px 88px rgba(0, 0, 0, 0.7);
+                        overflow: hidden;
+                        transform-origin: center;
+                        z-index: 30;
+                        transition:
+                            transform 140ms cubic-bezier(0.22, 1, 0.36, 1),
+                            box-shadow 140ms ease,
+                            border-color 120ms ease,
+                            background 120ms ease;
+                        cursor: pointer;
+                    }
 
-                /* hover grow */
-                .videoCard:hover {
-                    transform: scale(1.04);
-                }
+                    .videoCard.teaser {
+                        cursor: default;
+                    }
 
-                /* clickable hover glow */
-                .videoCard.clickable:hover {
-                    box-shadow: 0 32px 88px
-                    rgba(0, 0, 0, 0.7),
-                    0 0 36px
-                    rgba(255, 255, 255, 0.12);
-                    border-color: rgba(
-                            255,
-                            255,
-                            255,
-                            0.28
-                    );
-                    background: rgba(
-                            255,
-                            255,
-                            255,
-                            0.05
-                    );
-                }
+                    .videoCard:hover {
+                        transform: scale(1.04);
+                        box-shadow:
+                            0 32px 88px rgba(0, 0, 0, 0.7),
+                            0 0 36px rgba(255, 255, 255, 0.12);
+                        border-color: rgba(255, 255, 255, 0.28);
+                        background: rgba(0, 0, 0, 0.95);
+                    }
 
-                /* teaser hover = softer */
-                .videoCard.teaser:hover {
-                    box-shadow: 0 24px 64px
-                    rgba(0, 0, 0, 0.6);
-                    border-color: rgba(
-                            255,
-                            255,
-                            255,
-                            0.18
-                    );
-                    background: rgba(
-                            255,
-                            255,
-                            255,
-                            0.04
-                    );
-                }
+                    .cardCaption,
+                    .cardTitleRow,
+                    .cardFooter {
+                        background: #080808;
+                    }
 
-                /* CAPTION BAR (like .caption in Projects) */
-                .cardCaption {
-                    position: relative;
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                    padding: 12px 14px 8px 14px;
-                    border-bottom: 1px solid
-                    rgba(255, 255, 255, 0.08);
-                    background: rgba(
-                            0,
-                            0,
-                            0,
-                            0.35
-                    );
-                }
+                    .cardCaption {
+                        position: relative;
+                        display: flex;
+                        align-items: center;
+                        gap: 10px;
+                        padding: 10px 14px;
+                        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+                    }
 
-                .capIndex {
-                    font: 600 11px/1 'Rajdhani',
-                    monospace;
-                    letter-spacing: 0.16em;
-                    color: rgba(
-                            255,
-                            255,
-                            255,
-                            0.56
-                    );
-                    text-transform: uppercase;
-                }
+                    .capIndex,
+                    .capYear {
+                        font: 600 11px/1 'Rajdhani', monospace;
+                        letter-spacing: 0.16em;
+                        color: rgba(255, 255, 255, 0.56);
+                        text-transform: uppercase;
+                    }
+                    .capDot {
+                        width: 3px;
+                        height: 3px;
+                        border-radius: 999px;
+                        background: rgba(255, 255, 255, 0.25);
+                    }
 
-                .capDot {
-                    width: 3px;
-                    height: 3px;
-                    border-radius: 999px;
-                    background: rgba(
-                            255,
-                            255,
-                            255,
-                            0.25
-                    );
-                }
+                    .cardTitleRow {
+                        padding: 10px 14px 8px 14px;
+                        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+                    }
 
-                .capYear {
-                    font: 600 11px/1 'Rajdhani',
-                    monospace;
-                    letter-spacing: 0.16em;
-                    color: rgba(
-                            255,
-                            255,
-                            255,
-                            0.56
-                    );
-                    text-transform: uppercase;
-                }
+                    .cardTitle {
+                        font-family: 'Rajdhani', monospace;
+                        font-weight: 800;
+                        font-size: clamp(17px, 2.4vw, 22px);
+                        line-height: 1.15;
+                        color: #fff;
+                        margin: 0;
+                        letter-spacing: 0.01em;
+                    }
 
-                /* little x/close glyph in caption top-right, like a UI chrome element */
-                .miniClose {
-                    position: absolute;
-                    top: 8px;
-                    right: 8px;
-                    width: 16px;
-                    height: 16px;
-                    background: transparent;
-                    border: 0;
-                    padding: 0;
-                    cursor: default;
-                    pointer-events: none;
-                }
-                .miniCloseLine {
-                    position: absolute;
-                    top: 50%;
-                    left: 0;
-                    width: 100%;
-                    height: 1px;
-                    background: rgba(
-                            255,
-                            255,
-                            255,
-                            0.4
-                    );
-                }
-                .miniCloseLine:first-child {
-                    transform: translateY(-50%)
-                    rotate(45deg);
-                }
-                .miniCloseLine:last-child {
-                    transform: translateY(-50%)
-                    rotate(-45deg);
-                }
+                    .videoVisual {
+                        position: relative;
+                        width: 100%;
+                        aspect-ratio: 16 / 9;
+                        background: #000;
+                        border-top: 1px solid rgba(255, 255, 255, 0.08);
+                        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        overflow: hidden;
+                    }
 
-                /* TITLE ROW (like .p-title in projects) */
-                .cardTitle {
-                    font-family: 'Rajdhani',
-                    monospace;
-                    font-weight: 800;
-                    font-size: clamp(
-                            17px,
-                            2.4vw,
-                            22px
-                    );
-                    line-height: 1.15;
-                    color: #fff;
-                    margin: 10px 14px 8px 14px;
-                    letter-spacing: 0.01em;
-                }
+                    .playOverlay {
+                        position: absolute;
+                        inset: 0;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        background: rgba(0, 0, 0, 0.4);
+                        opacity: 0;
+                        pointer-events: none;
+                        transition: opacity 0.3s ease;
+                    }
+                    .playOverlay.visible {
+                        opacity: 1;
+                    }
+                    .playIcon {
+                        width: 180px;
+                        height: 180px;
+                        filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
+                        transform: scale(1);
+                        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+                    }
 
-                /* VIDEO VISUAL (16:9 media window) */
-                .videoVisual {
-                    position: relative;
-                    width: 100%;
-                    aspect-ratio: 16 / 9;
-                    background: #000;
-                    border-top: 1px solid
-                    rgba(255, 255, 255, 0.08);
-                    border-bottom: 1px solid
-                    rgba(255, 255, 255, 0.08);
+                    .cardFooter {
+                        display: flex;
+                        align-items: center;
+                        justify-content: flex-start;
+                        padding: 12px 14px 14px;
+                        border-top: 1px solid rgba(255, 255, 255, 0.08);
+                        gap: 16px;
+                        flex-wrap: wrap;
+                    }
 
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                }
+                    .videoSourceTag {
+                        padding: 5px 10px;
+                        font-size: 11px;
+                        font-weight: 600;
+                        line-height: 1;
+                        letter-spacing: 0.16em;
+                        text-transform: uppercase;
+                        border: 1px solid rgba(255, 255, 255, 0.1);
+                        color: rgba(255, 255, 255, 0.5);
+                        background: transparent;
+                        white-space: nowrap;
+                        transition: all 0.3s ease;
+                    }
 
-                .videoPlaceholder {
-                    color: rgba(
-                            255,
-                            255,
-                            255,
-                            0.4
-                    );
-                    font-size: 12px;
-                    letter-spacing: 0.15em;
-                    text-transform: uppercase;
-                    font-family: 'Rajdhani',
-                    monospace;
-                    text-align: center;
-                    line-height: 1.4;
-                    user-select: none;
-                    pointer-events: none;
-                }
-                .phText {
-                    opacity: 0.6;
-                }
+                    .videoSourceTag:hover {
+                        color: rgba(255, 255, 255, 0.8);
+                        border-color: rgba(255, 255, 255, 0.3);
+                    }
+                `}</style>
+            </section>
 
-                /* FOOTER META ROW
-                   replaces description + tag list in Projects */
-                .cardFooter {
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                    padding: 12px 14px 14px;
-                    background: rgba(
-                            0,
-                            0,
-                            0,
-                            0.4
-                    );
-                    border-top: 1px solid
-                    rgba(255, 255, 255, 0.08);
-                    gap: 16px;
-                    flex-wrap: wrap;
-                }
+            {/* ===================== FULLSCREEN MODAL ===================== */}
+            {isFullscreen && fullscreenVimeoId && (
+                <div
+                    className="fullscreenModal"
+                    style={{
+                        position: 'fixed',
+                        inset: 0,
+                        background: 'rgba(0, 0, 0, 0.98)',
+                        zIndex: 9999,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        animation: 'fadeInRecognition 0.3s ease-out',
+                    }}
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget) {
+                            setIsFullscreen(false);
+                        }
+                    }}
+                >
+                    <button
+                        className="recogCloseBtn"
+                        onClick={() => setIsFullscreen(false)}
+                        aria-label="Close"
+                    >
+                        <div className="recogCloseIcon">
+                            <span className="recogCloseLine first" />
+                            <span className="recogCloseLine second" />
+                        </div>
+                    </button>
 
-                /* left pill = source */
-                .videoSourceTag {
-                    padding: 8px 10px 7px;
-                    font-size: 11px;
-                    font-weight: 600;
-                    line-height: 1;
-                    letter-spacing: 0.16em;
-                    color: rgba(
-                            255,
-                            255,
-                            255,
-                            0.8
-                    );
-                    border: 1px solid
-                    rgba(255, 255, 255, 0.12);
-                    background: rgba(
-                            0,
-                            0,
-                            0,
-                            0.35
-                    );
-                    text-transform: uppercase;
-                    white-space: nowrap;
-                }
+                    <div
+                        style={{
+                            width: '90vw',
+                            maxWidth: '1600px',
+                            aspectRatio: '16 / 9',
+                        }}
+                    >
+                        <iframe
+                            ref={fullscreenIframeRef}
+                            title="Fullscreen video"
+                            src={`https://player.vimeo.com/video/${fullscreenVimeoId}?autoplay=1`}
+                            allow="autoplay; fullscreen; picture-in-picture"
+                            allowFullScreen
+                            style={{
+                                width: '100%',
+                                height: '100%',
+                                border: 'none',
+                            }}
+                        />
+                    </div>
 
-                /* right = date */
-                .videoDateText {
-                    font-size: 14px;
-                    font-weight: 400;
-                    line-height: 1;
-                    letter-spacing: 0.05em;
-                    color: rgba(
-                            255,
-                            255,
-                            255,
-                            0.7
-                    );
-                    white-space: nowrap;
-                }
-            `}</style>
-        </section>
+                    <style jsx>{`
+                        .recogCloseBtn {
+                            position: fixed;
+                            top: 32px;
+                            right: 32px;
+                            width: 48px;
+                            height: 48px;
+                            background: transparent;
+                            border: 1px solid rgba(255, 255, 255, 0.2);
+                            cursor: pointer;
+                            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+                            z-index: 10001;
+                        }
+
+                        .recogCloseIcon {
+                            position: relative;
+                            width: 20px;
+                            height: 20px;
+                            margin: auto;
+                        }
+
+                        .recogCloseLine {
+                            position: absolute;
+                            top: 50%;
+                            left: 0;
+                            width: 100%;
+                            height: 1px;
+                            background: rgba(255, 255, 255, 0.8);
+                            transform-origin: center;
+                            transition: transform 0.3s ease, background 0.3s ease;
+                        }
+
+                        .recogCloseLine.first {
+                            transform: translateY(-50%) rotate(45deg);
+                        }
+
+                        .recogCloseLine.second {
+                            transform: translateY(-50%) rotate(-45deg);
+                        }
+
+                        .recogCloseBtn:hover {
+                            border-color: rgba(255, 255, 255, 0.8);
+                            transform: rotate(90deg);
+                        }
+
+                        .recogCloseBtn:hover .recogCloseLine {
+                            background: #ffffff;
+                        }
+
+                        @media (max-width: 768px) {
+                            .recogCloseBtn {
+                                top: 16px;
+                                right: 16px;
+                                width: 40px;
+                                height: 40px;
+                            }
+                        }
+                    `}</style>
+                </div>
+            )}
+        </>
     );
+}
+
+/* TypeScript declaration for Vimeo Player API */
+declare global {
+    interface Window {
+        Vimeo?: {
+            Player: new (iframe: HTMLIFrameElement) => {
+                on: (event: string, callback: () => void) => void;
+            };
+        };
+    }
 }

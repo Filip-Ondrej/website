@@ -92,48 +92,44 @@ const styles = `
 .ct-guide--mid    { top: 50%; }
 .ct-guide--under  { top: var(--ct-under); }
 
-/* TUNNEL ELLIPSE AT BOTTOM (line enters the collab section) */
+/* ---------------------- TUNNEL ELLIPSE ---------------------- */
+/* smashed-circle around the bottom-right vertical anchor */
 .ct-tunnel {
+  --ct-tunnel-offset-y: 2px;      /* small downward nudge */
+
   position: absolute;
-  bottom: 12px;              /* aligns with bottom LineAnchor */
-  right: 100px;              /* same visual x as offsetX={100} on right LineAnchor */
-  width: 160px;
-  height: 42px;
+  bottom: 12px;                    /* same as ct-bottom-right anchor */
+  right: 100px;                    /* matches offsetX={100} */
+  width: 90px;                     /* wide + short -> ellipse vibe */
+  height: 30px;
   border-radius: 999px;
-  background: rgba(255,255,255,0.10);
-  transform: translateX(50%) scale(0);  /* anchored on the line, start tiny */
+  background: rgba(255,255,255,0.18);
+  transform: translateX(50%) translateY(var(--ct-tunnel-offset-y)) scale(0);
   transform-origin: center center;
   pointer-events: none;
+  transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
 }
 
-/* Responsive so it tracks your existing paddings */
 @media (max-width: 1024px) {
   .ct-tunnel {
     right: 60px;
-    width: 150px;
-    height: 40px;
+    width: 80px;
+    height: 28px;
   }
 }
+
 @media (max-width: 640px) {
   .ct-tunnel {
     right: 40px;
-    width: 140px;
-    height: 38px;
+    width: 72px;
+    height: 26px;
   }
 }
 
-/* Grow the tunnel once scroll position says it's time */
+/* grow / shrink depending on line progress */
 .ct-wrap--tunnel-ready .ct-tunnel {
-  animation: ctTunnelGrow 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-@keyframes ctTunnelGrow {
-  from {
-    transform: translateX(50%) scale(0);
-  }
-  to {
-    transform: translateX(50%) scale(1);
-  }
+  transform: translateX(50%) translateY(var(--ct-tunnel-offset-y)) scale(1);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -142,8 +138,19 @@ const styles = `
     opacity: 1 !important;
     transform: none !important;
   }
+  .ct-tunnel {
+    transition: none !important;
+  }
 }
 `;
+
+/** how many px BEFORE the anchor the tunnel opens */
+const TUNNEL_OFFSET_PX = 100;
+
+interface WindowWithLine extends Window {
+    lineAnchors?: Record<string, { x: number; y: number }>;
+    progressTipY?: number;
+}
 
 export default function CollaborationTitle({
                                                lines = ['TRUSTED BY THE BEST'],
@@ -157,10 +164,11 @@ export default function CollaborationTitle({
                                                debugGuides = false,
                                            }: CollaborationTitleProps) {
     const ref = React.useRef<HTMLDivElement | null>(null);
+
     const [visible, setVisible] = React.useState(false);
     const [tunnelReady, setTunnelReady] = React.useState(false);
 
-    // Start animation for title when section enters viewport
+    // Title words: start when this section enters viewport
     React.useEffect(() => {
         const el = ref.current;
         if (!el) return;
@@ -180,35 +188,38 @@ export default function CollaborationTitle({
         return () => io.disconnect();
     }, []);
 
-    // Tunnel trigger based on PX position of section bottom vs viewport bottom
+    // Tunnel open/close: based on line tip Y vs ct-bottom-right anchor Y
     React.useEffect(() => {
-        const el = ref.current;
-        if (!el) return;
+        const handleProximity = () => {
+            if (typeof window === 'undefined') return;
+            const win = window as WindowWithLine;
 
-        const handleScroll = () => {
-            if (tunnelReady) return;
-            const rect = el.getBoundingClientRect();
-            const vh = window.innerHeight || 1;
+            const anchors = win.lineAnchors;
+            if (!anchors) return;
 
-            const distanceToBottom = rect.bottom - vh;
-            const isInViewport = rect.bottom >= 0 && rect.top <= vh;
+            const bottomAnchor = anchors['ct-bottom-right'];
+            if (!bottomAnchor) return;
 
-            // Only fire when the section is visible AND its bottom
-            // is within 50px of the viewport bottom
-            if (isInViewport && distanceToBottom <= 50) {
-                setTunnelReady(true);
-            }
+            const tipY = win.progressTipY;
+            if (typeof tipY !== 'number') return;
+
+            // open once the tip gets within 100px ABOVE the anchor,
+            // stay open while tip is at/ below that (scrolling down),
+            // close only when tip goes back above that threshold.
+            const shouldBeReady = tipY >= bottomAnchor.y - TUNNEL_OFFSET_PX;
+
+            setTunnelReady(shouldBeReady);
         };
 
-        window.addEventListener('scroll', handleScroll, { passive: true });
-        window.addEventListener('resize', handleScroll, { passive: true });
-        handleScroll(); // initial check
+        handleProximity();
+        window.addEventListener('scroll', handleProximity, { passive: true });
+        window.addEventListener('anchors-updated', handleProximity);
 
         return () => {
-            window.removeEventListener('scroll', handleScroll);
-            window.removeEventListener('resize', handleScroll);
+            window.removeEventListener('scroll', handleProximity);
+            window.removeEventListener('anchors-updated', handleProximity);
         };
-    }, [tunnelReady]);
+    }, []);
 
     const computedHeight = typeof height === 'number' ? `${height}px` : height;
 
@@ -253,11 +264,11 @@ export default function CollaborationTitle({
 
                 {showAnchors && (
                     <div className="pointer-events-none absolute inset-0 z-[5]">
-                        {/* Start/top on the LEFT */}
+                        {/* MIRRORED: start/top on the LEFT */}
                         <div className="absolute left-0 top-[12px]">
                             <LineAnchor id="ct-start-left-top" position="left" offsetX={100} />
                         </div>
-                        {/* Middle horizontal line: left + right */}
+                        {/* Middle horizontal line */}
                         <div className="absolute left-0 top-1/2 w-0">
                             <LineAnchor id="ct-middle-left" position="left" offsetX={100} />
                         </div>
@@ -273,7 +284,7 @@ export default function CollaborationTitle({
                             <LineAnchor id="ct-bottom-right" position="right" offsetX={100} />
                         </div>
 
-                        {/* Tunnel at the bottom where the line enters the collab section */}
+                        {/* Tunnel ellipse around bottom anchor */}
                         <div className="ct-tunnel" />
                     </div>
                 )}

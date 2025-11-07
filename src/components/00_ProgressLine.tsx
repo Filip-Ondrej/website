@@ -39,6 +39,7 @@ type BubbleRuntimeState = {
 declare global {
     interface Window {
         lineAnchors?: AnchorsMap;
+        progressTipY?: number;     // <— add this
     }
 }
 
@@ -479,6 +480,11 @@ export function ProgressLine() {
 
             const tipNow = pageY + vh * vpPosNow;
             setTipY(tipNow);
+
+            // Expose tip for other sections (like the tunnel)
+            if (typeof window !== 'undefined') {
+                window.progressTipY = tipNow;
+            }
 
             const st = getBubbleRuntimeState(tipNow, bubblesRef.current);
             setRuntime(st);
