@@ -15,29 +15,10 @@ export const linePathConfig: PathSegment[] = [
     // Simple vertical line down the left side
     // ============================================
     {
-        from: 'her-top',
-        to: 'her-bottom',
-        type: 'vertical',
-        sectionNumber: 1,
-    },
-
-    // Transition between sections (vertical)
-    {
-        from: 'her-bottom',
-        to: 'hero-top',
-        type: 'vertical',
-        sectionNumber: 1,
-    },
-
-    // ============================================
-    // SECTION 1: HERO
-    // Simple vertical line down the left side
-    // ============================================
-    {
         from: 'hero-top',
         to: 'hero-bottom',
         type: 'vertical',
-        sectionNumber: 2,
+        sectionNumber: 1,
     },
 
     // Transition between sections (vertical)
@@ -45,7 +26,7 @@ export const linePathConfig: PathSegment[] = [
         from: 'hero-bottom',
         to: 'titlereveal-top',
         type: 'vertical',
-        sectionNumber: 2,
+        sectionNumber: 1,
     },
 
     // ============================================
@@ -56,14 +37,14 @@ export const linePathConfig: PathSegment[] = [
         from: 'titlereveal-top',
         to: 'titlereveal-left',
         type: 'vertical',
-        sectionNumber: 3,
+        sectionNumber: 2,
     },
 
     {
         from: 'titlereveal-left',
         to: 'titlereveal-right',
         type: 'horizontal',
-        sectionNumber: 3,
+        sectionNumber: 2,
         scrollMultiplier: 10, // 10x slower = 10% speed
     },
 
@@ -71,14 +52,14 @@ export const linePathConfig: PathSegment[] = [
         from: 'titlereveal-right',
         to: 'titlereveal-below',
         type: 'vertical',
-        sectionNumber: 3,
+        sectionNumber: 2,
 
     },
     {
         from: 'titlereveal-below',
         to: 'titlereveal-bottom',
         type: 'vertical',
-        sectionNumber: 3,
+        sectionNumber: 2,
 
     },
 
@@ -87,7 +68,7 @@ export const linePathConfig: PathSegment[] = [
         from: 'titlereveal-bottom',
         to: 'promovideo-top',
         type: 'vertical',
-        sectionNumber: 3,
+        sectionNumber: 2,
     },
     // ============================================
     // SECTION 3: PROMO VIDEO
@@ -97,7 +78,7 @@ export const linePathConfig: PathSegment[] = [
         from: 'promovideo-top',
         to: 'promovideo-bottom',
         type: 'vertical',
-        sectionNumber: 4,
+        sectionNumber: 3,
     },
 
     // Transition between sections (vertical)
@@ -105,7 +86,7 @@ export const linePathConfig: PathSegment[] = [
         from: 'promovideo-bottom',
         to: 'tt-start-right-top',
         type: 'vertical',
-        sectionNumber: 4,
+        sectionNumber: 3,
     },
 
 
@@ -119,7 +100,7 @@ export const linePathConfig: PathSegment[] = [
         from: 'tt-start-right-top',
         to: 'tt-middle-right',
         type: 'vertical',
-        sectionNumber: 5,
+        sectionNumber: 4,
     },
 
     // 2. CROSS HORIZONTALLY from LEFT to RIGHT (SLOW SCROLL)
@@ -127,7 +108,7 @@ export const linePathConfig: PathSegment[] = [
         from: 'tt-middle-right',
         to: 'tt-middle-left',
         type: 'horizontal',
-        sectionNumber: 5,
+        sectionNumber: 4,
         scrollMultiplier: 10, // 10x slower = 10% speed
     },
 
@@ -136,7 +117,7 @@ export const linePathConfig: PathSegment[] = [
         from: 'tt-middle-left',
         to: 'tt-under-left',
         type: 'vertical',
-        sectionNumber: 5,
+        sectionNumber: 4,
     },
 
     // 4. CROSS HORIZONTALLY from RIGHT to LEFT (SLOW SCROLL)
@@ -144,27 +125,214 @@ export const linePathConfig: PathSegment[] = [
         from: 'tt-under-left',
         to: 'tt-bottom-left',
         type: 'vertical',
-        sectionNumber: 5,
+        sectionNumber: 4,
     },
 
     // 5. Go down on LEFT side
     {
         from: 'tt-bottom-left',
-        to: 'graphTimeline-top',
+        to: 'timeline-top',
+        type: 'vertical',
+        sectionNumber: 4,
+    },
+
+// ============================================
+    // SECTION 5: PROGRESS GRAPH
+    // Simple vertical line down the left side
+    // ============================================
+    {
+        from: 'timeline-top',
+        to: 'timeline-left',
         type: 'vertical',
         sectionNumber: 5,
     },
 
+    {
+        from: 'timeline-left',
+        to: 'timeline-right',
+        type: 'horizontal',
+        sectionNumber: 5,
+        scrollMultiplier: 10, // 10x slower = 10% speed
+    },
 
-    // // ============================================
-    // // SECTION 4: CONTACT
-    // // Simple vertical line down the left side
-    // // ============================================
+    {
+        from: 'timeline-right',
+        to: 'timeline-below',
+        type: 'vertical',
+        sectionNumber: 5,
+
+    },
+    {
+        from: 'timeline-below',
+        to: 'timeline-bottom',
+        type: 'vertical',
+        sectionNumber: 5,
+
+    },
+
+    // Transition to projects section
+    {
+        from: 'timeline-bottom',
+        to: 'pt-start-right-top',
+        type: 'vertical',
+        sectionNumber: 5,
+    },
+// ============================================
+    // SECTION 4: TIMELINE TITLE
+    // This creates the horizontal crossings
+    // ============================================
+    //tt-start-right-top → tt-middle-right → tt-middle-left → tt-under-left → tt-bottom-left
+    // 1. Enter and go down on LEFT side
+    {
+        from: 'pt-start-right-top',
+        to: 'pt-middle-right',
+        type: 'vertical',
+        sectionNumber: 6,
+    },
+
+    // 2. CROSS HORIZONTALLY from LEFT to RIGHT (SLOW SCROLL)
+    {
+        from: 'pt-middle-right',
+        to: 'pt-middle-left',
+        type: 'horizontal',
+        sectionNumber: 6,
+        scrollMultiplier: 10, // 10x slower = 10% speed
+    },
+
+    // 3. Go down on RIGHT side
+    {
+        from: 'pt-middle-left',
+        to: 'pt-under-left',
+        type: 'vertical',
+        sectionNumber: 6,
+    },
+
+    // 4. CROSS HORIZONTALLY from RIGHT to LEFT (SLOW SCROLL)
+    {
+        from: 'pt-under-left',
+        to: 'pt-bottom-left',
+        type: 'vertical',
+        sectionNumber: 6,
+    },
+
+    // 5. Go down on LEFT side
+    {
+        from: 'pt-bottom-left',
+        to: 'projects-top',
+        type: 'vertical',
+        sectionNumber: 6,
+    },
+
+    // ============================================
+    // SECTION 1: HERO
+    // Simple vertical line down the left side
+    // ============================================
+    {
+        from: 'projects-top',
+        to: 'projects-bottom',
+        type: 'vertical',
+        sectionNumber: 7,
+    },
+
+    // Transition between sections (vertical)
+    {
+        from: 'projects-bottom',
+        to: 'ct-start-left-top',
+        type: 'vertical',
+        sectionNumber: 7,
+    },
+
+    // ============================================
+    // SECTION 4: TIMELINE TITLE
+    // This creates the horizontal crossings
+    // ============================================
+    //tt-start-right-top → tt-middle-right → tt-middle-left → tt-under-left → tt-bottom-left
+    // 1. Enter and go down on LEFT side
+    {
+        from: 'ct-start-left-top',
+        to: 'ct-middle-left',
+        type: 'vertical',
+        sectionNumber: 8,
+    },
+
+    // 2. CROSS HORIZONTALLY from LEFT to RIGHT (SLOW SCROLL)
+    {
+        from: 'ct-middle-left',
+        to: 'ct-middle-right',
+        type: 'horizontal',
+        sectionNumber: 8,
+        scrollMultiplier: 10, // 10x slower = 10% speed
+    },
+
+    // 3. Go down on RIGHT side
+    {
+        from: 'ct-middle-right',
+        to: 'ct-under-right',
+        type: 'vertical',
+        sectionNumber: 8,
+    },
+
+    // 4. CROSS HORIZONTALLY from RIGHT to LEFT (SLOW SCROLL)
+    {
+        from: 'ct-under-right',
+        to: 'ct-bottom-right',
+        type: 'vertical',
+        sectionNumber: 8,
+    },
+
+    // // 5. Go down on LEFT side
     // {
-    //     from: 'contact-top',
-    //     to: 'contact-bottom',
+    //     from: 'ct-bottom-right',
+    //     to: 'prt-start-right-top',
     //     type: 'vertical',
-    //     sectionNumber: 4,
+    //     sectionNumber: 8,
     // },
 
+
+
+    // ============================================
+    // SECTION 4: TIMELINE TITLE
+    // This creates the horizontal crossings
+    // ============================================
+    //tt-start-right-top → tt-middle-right → tt-middle-left → tt-under-left → tt-bottom-left
+    // 1. Enter and go down on LEFT side
+    {
+        from: 'prt-start-right-top',
+        to: 'prt-middle-right',
+        type: 'vertical',
+        sectionNumber: 9,
+    },
+
+    // 2. CROSS HORIZONTALLY from LEFT to RIGHT (SLOW SCROLL)
+    {
+        from: 'prt-middle-right',
+        to: 'prt-middle-left',
+        type: 'horizontal',
+        sectionNumber: 9,
+        scrollMultiplier: 10, // 10x slower = 10% speed
+    },
+
+    // 3. Go down on RIGHT side
+    {
+        from: 'prt-middle-left',
+        to: 'prt-under-left',
+        type: 'vertical',
+        sectionNumber: 9,
+    },
+
+    // 4. CROSS HORIZONTALLY from RIGHT to LEFT (SLOW SCROLL)
+    {
+        from: 'prt-under-left',
+        to: 'prt-bottom-left',
+        type: 'vertical',
+        sectionNumber: 9,
+    },
+
+    // 5. Go down on LEFT side
+    {
+        from: 'prt-bottom-left',
+        to: 'tcfyvjkybiun',
+        type: 'vertical',
+        sectionNumber: 9,
+    },
 ];

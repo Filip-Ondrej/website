@@ -12,6 +12,8 @@
 :root {
     color-scheme: dark;
 
+    --impact-color: #ffffff;
+
     /* Responsive spacing system */
     --space-xs: clamp(0.5rem, 1vw, 0.75rem);
     --space-sm: clamp(0.75rem, 2vw, 1rem);

@@ -43,10 +43,15 @@ export function LineAnchor({
             // Y position is based on where the anchor element actually is
             const y = rect.top + scrollY + offsetY;
 
+            // CRITICAL: Round to prevent subpixel rendering issues
+            // Without this, 4px lines appear as 1-2px at certain decimal positions
+            const roundedX = Math.round(x);
+            const roundedY = Math.round(y);
+
             // Store in global registry
             if (typeof window !== 'undefined') {
                 window.lineAnchors = window.lineAnchors || {};
-                window.lineAnchors[id] = { x, y };
+                window.lineAnchors[id] = { x: roundedX, y: roundedY };
 
                 // Trigger path recalculation
                 window.dispatchEvent(new CustomEvent('anchors-updated'));

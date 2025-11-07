@@ -6,13 +6,11 @@ import { LineAnchor } from '@/components/00_LineAnchor';
 
 type TitleHeaderProps = {
     lines?: string[];
-    height?: number | string;     // component’s own height
+    height?: number | string;     // component's own height - REDUCED default
     className?: string;
     scale?: number;               // font size multiplier
     leftOffsetPx?: number;        // horizontal offset of the title
-    midPercent?: number;          // % from top for the horizontal run (default 50)
-    underOffsetPx?: number;       // px below middle for the “under” point (default 100)
-    underTitleOffsetPx?: number;
+    underOffsetPx?: number;       // px below middle for the "under" point (default 100)
     reserveBelowPx?: number;      // real spacing below the title section to separate timeline (default 96)
     showAnchors?: boolean;
     debugGuides?: boolean;
@@ -117,12 +115,11 @@ const styles = `
   z-index: 1;
 }
 
-/* Title block: top pinned to the “under” anchor; height is 25% of the component */
+/* Title block: positioned using top (calc from 50% + offset) */
 .tt-title {
   position: absolute;
-  top: var(--tt-under-title);
+  top: var(--tt-under);
   left: var(--tt-left);
-  height: 25%;
   margin: 0;
 
   display: flex;
@@ -169,8 +166,8 @@ const styles = `
 @keyframes ttFade { to { opacity:0 } }
 
 /* optional debug guides */
-.tt-guide { position:absolute; left:0; right:0; height:1px; background: rgba(255,255,255,0.25); pointer-events:none; }
-.tt-guide--mid    { top: var(--tt-mid); }
+.tt-guide { position:absolute; left:0; right:0; height:1px; background: rgba(255,255,255,0.25); pointer-events:none; z-index: 100; }
+.tt-guide--mid    { top: 50%; }
 .tt-guide--under  { top: var(--tt-under); }
 
 @media (prefers-reduced-motion: reduce) {
@@ -181,19 +178,17 @@ const styles = `
 
 export default function TimelineTitle({
                                           lines = ['Every Lesson.', 'Every Pivot.', 'Every Win.'],
-                                          height = 'clamp(1200px, 42vh, 900px)',
+                                          height = 'clamp(900px, 100vh, 1400px)',
                                           className,
                                           scale = 1,
                                           leftOffsetPx = 200,
-                                          midPercent = 50,
-                                          underOffsetPx = 250,
-                                          underTitleOffsetPx = 100,
+                                          underOffsetPx = 100,
                                           reserveBelowPx = 96,
                                           showAnchors = true,
                                           debugGuides = false,
 
                                           // NEW defaults
-                                          typingMsPerChar = 50,
+                                          typingMsPerChar = 75,
                                           startThreshold = 0.5,
                                           startRootMargin = '0px 0px -10% 0px',
                                           startDelayMs = 0,
@@ -263,119 +258,121 @@ export default function TimelineTitle({
 
     const computedHeight = typeof height === 'number' ? `${height}px` : height;
 
-    // Shared CSS variables so anchors, guides, and title stay perfectly aligned
+    // Shared CSS variables - horizontal line ALWAYS at 50%, title positioned relative to it
     const wrapperStyle: React.CSSProperties & {
         ['--tt-scale']: string;
         ['--tt-left']: string;
-        ['--tt-mid']: string;
         ['--tt-under']: string;
-        ['--tt-under-title']: string;
     } = {
         ['--tt-scale']: String(scale),
         ['--tt-left']: `${leftOffsetPx}px`,
-        ['--tt-mid']: `${midPercent}%`,
-        ['--tt-under']: `calc(${midPercent}% + ${underOffsetPx}px)`,
-        ['--tt-under-title']: `calc(${midPercent}% + ${underTitleOffsetPx}px)`,
+        ['--tt-under']: `calc(50% + ${underOffsetPx}px)`,
     };
 
     return (
         <>
-        <div
-            ref={ref}
-            className={clsx('tt-wrap', className)}
-            style={{ ...wrapperStyle, height: computedHeight, marginBottom: reserveBelowPx }}
-            aria-hidden="true"
-        >
-            <style>{styles}</style>
+            <div
+                ref={ref}
+                className={clsx('tt-wrap', className)}
+                style={{ ...wrapperStyle, height: computedHeight, marginBottom: reserveBelowPx }}
+                aria-hidden="true"
+            >
+                <style>{styles}</style>
 
-            {debugGuides && (
-                <>
-                    <div className="tt-guide tt-guide--mid" />
-                    <div className="tt-guide tt-guide--under" />
-                </>
-            )}
+                {debugGuides && (
+                    <>
+                        <div className="tt-guide tt-guide--mid" />
+                        <div className="tt-guide tt-guide--under" />
+                    </>
+                )}
 
-            {/* Anchors: right-top → middle-right → middle-left → under-left → bottom-left */}
-            {showAnchors && (
-                <div className="pointer-events-none absolute inset-0 z-[5]">
-                    <div className="absolute right-0 top-[12px]">
-                        <LineAnchor id="tt-start-right-top" position="right" offsetX={100} />
+                {/* Anchors: horizontal line ALWAYS at 50% (top-1/2) */}
+                {showAnchors && (
+                    <div className="pointer-events-none absolute inset-0 z-[5]">
+                        <div className="absolute right-0 top-[12px]">
+                            <LineAnchor id="tt-start-right-top" position="right" offsetX={100} />
+                        </div>
+                        {/* Middle horizontal line - FIXED at 50% */}
+                        <div className="absolute right-0 top-1/2 w-0">
+                            <LineAnchor id="tt-middle-right" position="right" offsetX={100} />
+                        </div>
+                        <div className="absolute left-0 top-1/2 w-0">
+                            <LineAnchor id="tt-middle-left" position="left" offsetX={100} />
+                        </div>
+                        {/* Under anchor - positioned relative to 50% */}
+                        <div className="absolute left-0 w-0" style={{ top: 'var(--tt-under)' }}>
+                            <LineAnchor id="tt-under-left" position="left" offsetX={100} />
+                        </div>
+                        <div className="absolute left-0 bottom-[12px]">
+                            <LineAnchor id="tt-bottom-left" position="left" offsetX={100} />
+                        </div>
                     </div>
-                    <div className="absolute right-0 w-0" style={{ top: 'var(--tt-mid)' }}>
-                        <LineAnchor id="tt-middle-right" position="right" offsetX={100} />
-                    </div>
-                    <div className="absolute left-0 w-0" style={{ top: 'var(--tt-mid)' }}>
-                        <LineAnchor id="tt-middle-left" position="left" offsetX={100} />
-                    </div >
-                    <div className="absolute left-0 w-0" style={{ top: 'var(--tt-under)' }}>
-                    <LineAnchor id="tt-under-left" position="left" offsetX={100} />
-                </div>
-                <div className="absolute left-0 bottom-[12px]">
-                <LineAnchor id="tt-bottom-left" position="left" offsetX={100} />
-        </div>
-</div>
-)}
+                )}
 
-{/* Title (top pinned to --tt-under, height 25%) */}
-    <h1 className="tt-title">
-        {/* Line 1 */}
-        <span className="tt-line">
-            {lines[0].split('').map((ch, i) => (
-                <React.Fragment key={`l0-${i}`}>
-                <span className={clsx('tt-ch', i < (visible[0] ?? 0) && 'tt-ch--v')}>
-                  {ch === ' ' ? '\u00A0' : ch}
-                </span>
-                    {i === (visible[0] ?? 0) - 1 &&
-                        (visible[0] ?? 0) > 0 &&
-                        (visible[0] ?? 0) < lines[0].length &&
-                        !lockedComplete && (
-                            <span className={clsx('tt-cur', isPaused ? 'tt-cur--paused' : 'tt-cur--typing')} />
-                        )}
-                </React.Fragment>
-            ))}
-          </span>
+                {/* Title (top positioned via calc(50% + offset)) */}
+                <h1 className="tt-title">
+                    {/* Line 1 */}
+                    <span className="tt-line">
+                        {lines[0].split('').map((ch, i) => (
+                            <React.Fragment key={`l0-${i}`}>
+                                <span className={clsx('tt-ch', i < (visible[0] ?? 0) && 'tt-ch--v')}>
+                                    {ch === ' ' ? '\u00A0' : ch}
+                                </span>
+                                {/* Show cursor right after this character if it's the last visible one */}
+                                {!allDone &&
+                                    i === (visible[0] ?? 0) - 1 &&
+                                    typedChars > 0 &&
+                                    typedChars <= lines[0].length && (
+                                        <span className={clsx('tt-cur', isPaused ? 'tt-cur--paused' : 'tt-cur--typing')} />
+                                    )}
+                            </React.Fragment>
+                        ))}
+                    </span>
 
-        {/* Line 2 */}
-        <span className="tt-line">
-            {lines[1].split('').map((ch, i) => (
-                <React.Fragment key={`l1-${i}`}>
-                <span className={clsx('tt-ch', i < (visible[1] ?? 0) && 'tt-ch--v')}>
-                  {ch === ' ' ? '\u00A0' : ch}
-                </span>
-                    {i === (visible[1] ?? 0) - 1 &&
-                        (visible[1] ?? 0) > 0 &&
-                        (visible[1] ?? 0) < lines[1].length &&
-                        !lockedComplete && (
-                            <span className={clsx('tt-cur', isPaused ? 'tt-cur--paused' : 'tt-cur--typing')} />
-                        )}
-                </React.Fragment>
-            ))}
-          </span>
+                    {/* Line 2 */}
+                    <span className="tt-line">
+                        {lines[1].split('').map((ch, i) => (
+                            <React.Fragment key={`l1-${i}`}>
+                                <span className={clsx('tt-ch', i < (visible[1] ?? 0) && 'tt-ch--v')}>
+                                    {ch === ' ' ? '\u00A0' : ch}
+                                </span>
+                                {/* Show cursor right after this character if it's the last visible one */}
+                                {!allDone &&
+                                    i === (visible[1] ?? 0) - 1 &&
+                                    typedChars > lines[0].length &&
+                                    typedChars <= lines[0].length + lines[1].length && (
+                                        <span className={clsx('tt-cur', isPaused ? 'tt-cur--paused' : 'tt-cur--typing')} />
+                                    )}
+                            </React.Fragment>
+                        ))}
+                    </span>
 
-        {/* Line 3 — gold */}
-        <span className={clsx('tt-line', 'tt-gold')}>
-            {lines[2].split('').map((ch, i) => (
-                <React.Fragment key={`l2-${i}`}>
-                <span className={clsx('tt-ch', i < (visible[2] ?? 0) && 'tt-ch--v')}>
-                  {ch === ' ' ? '\u00A0' : ch}
-                </span>
-                    {i === (visible[2] ?? 0) - 1 &&
-                        (visible[2] ?? 0) > 0 &&
-                        (visible[2] ?? 0) < lines[2].length &&
-                        !lockedComplete && (
-                            <span className={clsx('tt-cur', isPaused ? 'tt-cur--paused' : 'tt-cur--typing')} />
-                        )}
-                </React.Fragment>
-            ))}
-            {allDone && <span className="tt-cur tt-cur--done" />}
-          </span>
-    </h1>
-</div>
+                    {/* Line 3 — gold */}
+                    <span className={clsx('tt-line', 'tt-gold')}>
+                        {lines[2].split('').map((ch, i) => (
+                            <React.Fragment key={`l2-${i}`}>
+                                <span className={clsx('tt-ch', i < (visible[2] ?? 0) && 'tt-ch--v')}>
+                                    {ch === ' ' ? '\u00A0' : ch}
+                                </span>
+                                {/* Show cursor right after this character if it's the last visible one */}
+                                {!allDone &&
+                                    i === (visible[2] ?? 0) - 1 &&
+                                    typedChars > lines[0].length + lines[1].length &&
+                                    typedChars <= totalChars && (
+                                        <span className={clsx('tt-cur', isPaused ? 'tt-cur--paused' : 'tt-cur--typing')} />
+                                    )}
+                            </React.Fragment>
+                        ))}
+                        {/* Final cursor animation when done */}
+                        {allDone && <span className="tt-cur tt-cur--done" />}
+                    </span>
+                </h1>
+            </div>
 
-    {/* OPTIONAL: mute the timeline's top rule if it still peeks under the title */}
-    <style jsx global>{`
-        /* .tl-line--top { display: none !important; } */
-      `}</style>
-</>
-);
+            {/* OPTIONAL: mute the timeline's top rule if it still peeks under the title */}
+            <style jsx global>{`
+                /* .tl-line--top { display: none !important; } */
+            `}</style>
+        </>
+    );
 }

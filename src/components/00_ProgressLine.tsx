@@ -42,7 +42,8 @@ declare global {
     }
 }
 
-// ====== PURE HELPERS ======
+// ====== HELPERS ======
+
 function clamp(v: number, min: number, max: number) {
     return Math.max(min, Math.min(max, v));
 }
@@ -51,42 +52,6 @@ function dist(a: AnchorPoint, b: AnchorPoint) {
     const dx = b.x - a.x;
     const dy = b.y - a.y;
     return Math.sqrt(dx * dx + dy * dy);
-}
-
-/**
- * Snap lines that are nearly horizontal/vertical so they render crisp
- * (prevents anti-aliased “thin” 1px look on horizontals).
- * For even stroke widths (2, 4), align to integer pixels.
- * For odd widths, align to 0.5 pixels.
- */
-function snapForStroke(
-    fromX: number, fromY: number,
-    toX: number, toY: number,
-    strokeW: number
-) {
-    const dx = Math.abs(toX - fromX);
-    const dy = Math.abs(toY - fromY);
-    const halfPixel = (strokeW % 2 === 1) ? 0.5 : 0;
-
-    // Snap “almost horizontal”
-    if (dy < 1) {
-        const y = Math.round((fromY + toY) * 0.5) + halfPixel;
-        return { fromX, fromY: y, toX, toY: y };
-    }
-
-    // Snap “almost vertical”
-    if (dx < 1) {
-        const x = Math.round((fromX + toX) * 0.5) + halfPixel;
-        return { fromX: x, fromY, toX: x, toY };
-    }
-
-    // Otherwise snap endpoints to integer grid (avoid subpixel jitter)
-    return {
-        fromX: Math.round(fromX) + halfPixel,
-        fromY: Math.round(fromY) + halfPixel,
-        toX: Math.round(toX) + halfPixel,
-        toY: Math.round(toY) + halfPixel,
-    };
 }
 
 function segmentIsWithinRevealRange(
@@ -99,7 +64,7 @@ function segmentIsWithinRevealRange(
     return segMinY <= tipY + aheadPx;
 }
 
-// Build slowdown “bubbles” for each horizontal+down pair
+// Build slowdown "bubbles" for each horizontal+down pair
 function computeBubbles(anchors: AnchorsMap | undefined): Bubble[] {
     if (!anchors) return [];
 
@@ -174,7 +139,10 @@ function getActiveBubbleAtY(y: number, bubbles: Bubble[]): Bubble | null {
 
 function getBubbleBySegIndex(segIndex: number, bubbles: Bubble[]): Bubble | null {
     for (const b of bubbles) {
-        if (b.horizontalSegIndex === segIndex || b.postVerticalSegIndex === segIndex) {
+        if (
+            b.horizontalSegIndex === segIndex ||
+            b.postVerticalSegIndex === segIndex
+        ) {
             return b;
         }
     }
@@ -182,9 +150,8 @@ function getBubbleBySegIndex(segIndex: number, bubbles: Bubble[]): Bubble | null
 }
 
 /**
- * Treat horizontal + its drop as one conveyor belt:
- * - tip travels downward dropLen px
- * - we reveal bubblePathDistance px (horiz + drop) along that belt
+ * bubblePathProgress
+ * Treat horizontal + its drop as one conveyor belt.
  */
 function bubblePathProgress(
     bubble: Bubble,
@@ -203,16 +170,17 @@ function bubblePathProgress(
             horizWidth === 0 ? 1 : clamp(pathCovered / horizWidth, 0, 1);
         return { horizProg, vertProg: 0 };
     } else {
-        const afterHoriz = pathCovered - horizWidth; // distance into vertical leg
+        const afterHoriz = pathCovered - horizWidth;
         const vertProg = clamp(afterHoriz / dropLen, 0, 1);
         return { horizProg: 1, vertProg };
     }
 }
 
 /**
+ * getBubbleRuntimeState
  * While tip is inside a bubble:
- *  - slow scroll so visual cable speed feels steady
- *  - lock future segments past bubble.maxOwnedIndex
+ *  - scroll is slowed via scrollMult in wheel handler
+ *  - we also use bubble.maxOwnedIndex to lock future segments
  */
 function getBubbleRuntimeState(
     tipY: number,
@@ -220,7 +188,9 @@ function getBubbleRuntimeState(
 ): BubbleRuntimeState {
     const bubble = getActiveBubbleAtY(tipY, bubbles);
 
-    if (!bubble) return { bubble: null, isActive: false, scrollMult: 1 };
+    if (!bubble) {
+        return { bubble: null, isActive: false, scrollMult: 1 };
+    }
 
     // if we've basically hit the bottom of the bubble, unlock
     if (tipY >= bubble.endY - 0.5) {
@@ -230,11 +200,15 @@ function getBubbleRuntimeState(
     const baseSlow = 1 / bubble.bubbleMult;
     const scrollMult = clamp(baseSlow, 0.02, 1);
 
-    return { bubble, isActive: true, scrollMult };
+    return {
+        bubble,
+        isActive: true,
+        scrollMult,
+    };
 }
 
 /**
- * Segment completion percentage at a given tipY.
+ * getSegmentLogicalProgress
  */
 function getSegmentLogicalProgress(
     segIndex: number,
@@ -255,8 +229,10 @@ function getSegmentLogicalProgress(
         if (tipY >= bubble.endY) return 1;
 
         const { horizProg, vertProg } = bubblePathProgress(bubble, tipY);
+
         if (segIndex === bubble.horizontalSegIndex) return horizProg;
         if (segIndex === bubble.postVerticalSegIndex) return vertProg;
+
         return 0;
     }
 
@@ -270,7 +246,8 @@ function getSegmentLogicalProgress(
 }
 
 /**
- * White cable (active stroke) is never allowed to draw past the tip (downward).
+ * clampProgressByTip
+ * White cable (active stroke) is never allowed to "draw past" the tip.
  */
 function clampProgressByTip(
     rawProg: number,
@@ -280,7 +257,7 @@ function clampProgressByTip(
 ): number {
     const dy = toA.y - fromA.y;
 
-    // horizontal / upward segments can't go "below tip"
+    // horizontal / upward segments can't go "below tip", so raw is fine
     if (Math.abs(dy) < 0.0001) {
         return clamp(rawProg, 0, 1);
     }
@@ -300,8 +277,7 @@ function clampProgressByTip(
 }
 
 /**
- * - segment i waits until all segments < i are basically done
- * - during bubble slowdown we don't allow drawing segments beyond that bubble
+ * canDrawSegment
  */
 function canDrawSegment(
     segIndex: number,
@@ -321,7 +297,9 @@ function canDrawSegment(
     for (let i = 0; i < segIndex; i++) {
         if (i <= maxAllowed) {
             const prevProg = getSegmentLogicalProgress(i, tipY, anchors, bubbles);
-            if (prevProg < 0.999) return false;
+            if (prevProg < 0.999) {
+                return false;
+            }
         }
     }
 
@@ -329,12 +307,14 @@ function canDrawSegment(
 }
 
 /**
- * Extend a "virtual" final segment from the last anchor to the bottom of the page.
+ * getLastAnchorAndBottomTail
  */
 function getLastAnchorAndBottomTail(
     anchors: AnchorsMap | undefined
 ): { tailFrom: AnchorPoint | null; tailTo: AnchorPoint | null } {
-    if (!anchors) return { tailFrom: null, tailTo: null };
+    if (!anchors) {
+        return { tailFrom: null, tailTo: null };
+    }
 
     let deepestId: string | null = null;
     let deepestY = -Infinity;
@@ -346,10 +326,14 @@ function getLastAnchorAndBottomTail(
         }
     }
 
-    if (!deepestId) return { tailFrom: null, tailTo: null };
+    if (!deepestId) {
+        return { tailFrom: null, tailTo: null };
+    }
 
     const fromA = anchors[deepestId];
-    if (!fromA) return { tailFrom: null, tailTo: null };
+    if (!fromA) {
+        return { tailFrom: null, tailTo: null };
+    }
 
     const bottomY = document.documentElement.scrollHeight;
     const tailFrom = { x: fromA.x, y: fromA.y };
@@ -364,20 +348,14 @@ function getLastAnchorAndBottomTail(
 
 // ====== COMPONENT ======
 export function ProgressLine() {
-    // where in viewport (0..1) the "tip" sits
-    const [viewportPos, setViewportPos] = useState(0);
-
-    // absolute doc-space Y of that tip
+    const [, setViewportPos] = useState(0);
     const [tipY, setTipY] = useState(0);
-
-    // bubble runtime state
     const [runtime, setRuntime] = useState<BubbleRuntimeState>({
         bubble: null,
         isActive: false,
         scrollMult: 1,
     });
 
-    // dummy state to force recompute when anchors move
     const [, setPathData] = useState<{
         pathString: string;
         totalLength: number;
@@ -397,10 +375,12 @@ export function ProgressLine() {
         maxY: 0,
     });
 
-    // refs
-    const pageScrollRef = useRef(0);
     const lastTsRef = useRef<number | null>(null);
     const bubblesRef = useRef<Bubble[]>([]);
+
+    // canonical scroll used by wheel handler (with bubble slowdown)
+    const pageScrollRef = useRef(0);
+    const wheelScrollingRef = useRef(false);
 
     // ---- LAYOUT SYNC ----
     const rebuildAll = useCallback(() => {
@@ -425,56 +405,11 @@ export function ProgressLine() {
         };
     }, [rebuildAll]);
 
-    // ---- SCROLL + RAF LOOP ----
+    // ---- SCROLL + RAF LOOP (original behavior + bubble slowdown, no smoothing) ----
     useEffect(() => {
         let rafId: number;
 
-        const handleWheel = (e: WheelEvent) => {
-            e.preventDefault();
-
-            const maxScroll =
-                document.documentElement.scrollHeight - window.innerHeight;
-
-            // tip BEFORE applying this wheel
-            const currPageY = pageScrollRef.current;
-            const vh = window.innerHeight;
-            const docH = document.documentElement.scrollHeight;
-            const maxScrollForVP = docH - vh;
-
-            const INTRO = vh * 0.3;
-            const OUTRO = vh * 0.3;
-            const introEnd = INTRO;
-            const normalEnd = maxScrollForVP - OUTRO;
-
-            let vpPosNow = 0;
-            if (currPageY <= introEnd) {
-                vpPosNow = (currPageY / introEnd) * 0.3;
-            } else if (currPageY <= normalEnd) {
-                const norm = (currPageY - introEnd) / (normalEnd - introEnd);
-                vpPosNow = 0.3 + norm * 0.4;
-            } else {
-                const outro = (currPageY - normalEnd) / OUTRO;
-                vpPosNow = 0.7 + outro * 0.3;
-            }
-            vpPosNow = clamp(vpPosNow, 0, 1);
-
-            const tipBefore = currPageY + vh * vpPosNow;
-
-            const state = getBubbleRuntimeState(tipBefore, bubblesRef.current);
-            setRuntime(state);
-
-            let newPage = pageScrollRef.current + e.deltaY * state.scrollMult;
-            newPage = clamp(newPage, 0, maxScroll);
-
-            pageScrollRef.current = newPage;
-            window.scrollTo(0, newPage);
-        };
-
-        const raf = (ts: number) => {
-            if (lastTsRef.current === null) lastTsRef.current = ts;
-            lastTsRef.current = ts;
-
-            const pageY = pageScrollRef.current;
+        const computeViewportPos = (pageY: number) => {
             const vh = window.innerHeight;
             const docH = document.documentElement.scrollHeight;
             const maxScrollForVP = docH - vh;
@@ -494,8 +429,52 @@ export function ProgressLine() {
                 const outro = (pageY - normalEnd) / OUTRO;
                 vpPosNow = 0.7 + outro * 0.3;
             }
-            vpPosNow = clamp(vpPosNow, 0, 1);
+            return clamp(vpPosNow, 0, 1);
+        };
 
+        const handleWheel = (e: WheelEvent) => {
+            e.preventDefault();
+
+            const vh = window.innerHeight;
+            const docH = document.documentElement.scrollHeight;
+            const maxScroll = docH - vh;
+
+            const currPageY = pageScrollRef.current;
+            const vpPosNow = computeViewportPos(currPageY);
+            const tipBefore = currPageY + vh * vpPosNow;
+
+            const state = getBubbleRuntimeState(tipBefore, bubblesRef.current);
+            setRuntime(state);
+
+            // clamp delta a bit so we don't jump crazy amounts
+            const rawDelta = e.deltaY;
+            const delta = clamp(rawDelta, -150, 150);
+
+            let newPage = currPageY + delta * state.scrollMult;
+            newPage = clamp(newPage, 0, maxScroll);
+
+            pageScrollRef.current = newPage;
+            wheelScrollingRef.current = true;
+            window.scrollTo(0, newPage);
+        };
+
+        const handleScroll = () => {
+            if (wheelScrollingRef.current) {
+                wheelScrollingRef.current = false;
+                return;
+            }
+            const current = window.scrollY || window.pageYOffset || 0;
+            pageScrollRef.current = current;
+        };
+
+        const raf = (ts: number) => {
+            if (lastTsRef.current === null) lastTsRef.current = ts;
+            lastTsRef.current = ts;
+
+            const pageY = pageScrollRef.current;
+            const vh = window.innerHeight;
+
+            const vpPosNow = computeViewportPos(pageY);
             setViewportPos(vpPosNow);
 
             const tipNow = pageY + vh * vpPosNow;
@@ -507,24 +486,31 @@ export function ProgressLine() {
             rafId = requestAnimationFrame(raf);
         };
 
-        pageScrollRef.current = window.scrollY;
+        // init scroll ref
+        const initial = window.scrollY || window.pageYOffset || 0;
+        pageScrollRef.current = initial;
         lastTsRef.current = null;
 
         window.addEventListener('wheel', handleWheel, { passive: false });
+        window.addEventListener('scroll', handleScroll, { passive: true });
         rafId = requestAnimationFrame(raf);
 
         return () => {
             window.removeEventListener('wheel', handleWheel);
+            window.removeEventListener('scroll', handleScroll);
             cancelAnimationFrame(rafId);
         };
     }, []);
 
+    // grab anchors from window
     const anchors: AnchorsMap | undefined =
         typeof window !== 'undefined' ? window.lineAnchors : undefined;
 
-    if (!anchors) return null;
+    if (!anchors) {
+        return null;
+    }
 
-    // --- INTRO STUB (top filler) ---
+    // --- INTRO STUB ---
     let introFrom: AnchorPoint | null = null;
     let introTo: AnchorPoint | null = null;
     if (linePathConfig.length > 0) {
@@ -536,7 +522,7 @@ export function ProgressLine() {
         }
     }
 
-    // --- Bottom tail (continue after last anchor) ---
+    // --- Bottom tail ---
     const { tailFrom, tailTo } = getLastAnchorAndBottomTail(anchors);
 
     const lastSegIndex = linePathConfig.length - 1;
@@ -565,31 +551,40 @@ export function ProgressLine() {
 
     const tailAnimatedVisible = tailVisible && lastSegmentIsDone();
 
-    // intro stub active progress (use snapped geometry)
-    let introDasharray = 0;
-    let introDashoffset = 0;
-
-    // tail active progress (use snapped geometry)
     let tailDasharray = 0;
     let tailDashoffset = 0;
+    if (tailAnimatedVisible && tailFrom && tailTo) {
+        const totalTailY = tailTo.y - tailFrom.y;
+        const rawTailProg =
+            totalTailY > 0 ? clamp((tipY - tailFrom.y) / totalTailY, 0, 1) : 1;
 
-    if (introFrom && introTo) {
-        const s = snapForStroke(
-            introFrom.x, introFrom.y,
-            introTo.x, introTo.y,
-            ACTIVE_LINE_WIDTH
+        const tailProgClamped = clampProgressByTip(
+            rawTailProg,
+            tailFrom,
+            tailTo,
+            tipY
         );
-        const stubLen = dist({ x: s.fromX, y: s.fromY }, { x: s.toX, y: s.toY });
+
+        const tailLen = dist(tailFrom, tailTo);
+        tailDasharray = tailLen;
+        tailDashoffset = tailLen * (1 - tailProgClamped);
+    }
+
+    // intro stub animated progress
+    let introDasharray = 0;
+    let introDashoffset = 0;
+    if (introFrom && introTo) {
+        const stubLen = dist(introFrom, introTo);
 
         const stubRawProg =
-            s.toY > s.fromY
-                ? clamp((tipY - s.fromY) / (s.toY - s.fromY), 0, 1)
+            introTo.y > introFrom.y
+                ? clamp((tipY - introFrom.y) / (introTo.y - introFrom.y), 0, 1)
                 : 1;
 
         const stubProgClamped = clampProgressByTip(
             stubRawProg,
-            { x: s.fromX, y: s.fromY },
-            { x: s.toX, y: s.toY },
+            introFrom,
+            introTo,
             tipY
         );
 
@@ -597,69 +592,30 @@ export function ProgressLine() {
         introDashoffset = stubLen * (1 - stubProgClamped);
     }
 
-    if (tailAnimatedVisible && tailFrom && tailTo) {
-        const s = snapForStroke(
-            tailFrom.x, tailFrom.y,
-            tailTo.x, tailTo.y,
-            ACTIVE_LINE_WIDTH
-        );
-        const totalTailY = s.toY - s.fromY;
-        const rawTailProg =
-            totalTailY > 0 ? clamp((tipY - s.fromY) / totalTailY, 0, 1) : 1;
+    const svgHeight = document.documentElement.scrollHeight;
 
-        const tailProgClamped = clampProgressByTip(
-            rawTailProg,
-            { x: s.fromX, y: s.fromY },
-            { x: s.toX, y: s.toY },
-            tipY
-        );
-
-        const tailLen = dist({ x: s.fromX, y: s.fromY }, { x: s.toX, y: s.toY });
-        tailDasharray = tailLen;
-        tailDashoffset = tailLen * (1 - tailProgClamped);
-    }
-
-    // ===== RENDER =====
     return (
         <svg
             className="absolute top-0 left-0 w-full pointer-events-none"
             style={{
-                height: `${document.documentElement.scrollHeight}px`,
+                height: `${svgHeight}px`,
                 zIndex: 50,
             }}
         >
-            <defs>
-                <filter id="line-glow">
-                    <feGaussianBlur stdDeviation="3" result="coloredBlur" />
-                    <feMerge>
-                        <feMergeNode in="coloredBlur" />
-                        <feMergeNode in="SourceGraphic" />
-                    </feMerge>
-                </filter>
-            </defs>
+            {/* 1. Intro stub baseline */}
+            {introFrom && introTo && (
+                <path
+                    d={`M ${introFrom.x} ${introFrom.y} L ${introTo.x} ${introTo.y}`}
+                    fill="none"
+                    stroke={STATIC_LINE_COLOR}
+                    strokeWidth={STATIC_LINE_WIDTH}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    vectorEffect="non-scaling-stroke"
+                />
+            )}
 
-            {/* 1. Intro stub baseline (snapped) */}
-            {introFrom && introTo && (() => {
-                const s = snapForStroke(
-                    introFrom.x, introFrom.y,
-                    introTo.x, introTo.y,
-                    STATIC_LINE_WIDTH
-                );
-                return (
-                    <path
-                        d={`M ${s.fromX} ${s.fromY} L ${s.toX} ${s.toY}`}
-                        fill="none"
-                        stroke={STATIC_LINE_COLOR}
-                        strokeWidth={STATIC_LINE_WIDTH}
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        vectorEffect="non-scaling-stroke"
-                        shapeRendering="crispEdges"
-                    />
-                );
-            })()}
-
-            {/* 2. Real segments baseline (snapped) */}
+            {/* 2. Real segments baseline */}
             {linePathConfig.map((seg, i) => {
                 const fromA = anchors[seg.from];
                 const toA = anchors[seg.to];
@@ -672,82 +628,61 @@ export function ProgressLine() {
                     BASELINE_REVEAL_AHEAD
                 );
 
-                if (i === 0) showBaseline = true;
-                if (!showBaseline) return null;
+                if (i === 0) {
+                    showBaseline = true;
+                }
 
-                const s = snapForStroke(
-                    fromA.x, fromA.y,
-                    toA.x, toA.y,
-                    STATIC_LINE_WIDTH
-                );
+                if (!showBaseline) return null;
 
                 return (
                     <path
                         key={`baseline-${i}`}
-                        d={`M ${s.fromX} ${s.fromY} L ${s.toX} ${s.toY}`}
+                        d={`M ${fromA.x} ${fromA.y} L ${toA.x} ${toA.y}`}
                         fill="none"
                         stroke={STATIC_LINE_COLOR}
                         strokeWidth={STATIC_LINE_WIDTH}
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         vectorEffect="non-scaling-stroke"
-                        shapeRendering="crispEdges"
                     />
                 );
             })}
 
-            {/* 3. Tail baseline (snapped) */}
-            {tailFrom && tailTo && tailVisible && (() => {
-                const s = snapForStroke(
-                    tailFrom.x, tailFrom.y,
-                    tailTo.x, tailTo.y,
-                    STATIC_LINE_WIDTH
-                );
-                return (
-                    <path
-                        d={`M ${s.fromX} ${s.fromY} L ${s.toX} ${s.toY}`}
-                        fill="none"
-                        stroke={STATIC_LINE_COLOR}
-                        strokeWidth={STATIC_LINE_WIDTH}
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        vectorEffect="non-scaling-stroke"
-                        shapeRendering="crispEdges"
-                    />
-                );
-            })()}
+            {/* 3. Tail baseline */}
+            {tailFrom && tailTo && tailVisible && (
+                <path
+                    d={`M ${tailFrom.x} ${tailFrom.y} L ${tailTo.x} ${tailTo.y}`}
+                    fill="none"
+                    stroke={STATIC_LINE_COLOR}
+                    strokeWidth={STATIC_LINE_WIDTH}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    vectorEffect="non-scaling-stroke"
+                />
+            )}
 
-            {/* 4. Intro stub active (snapped) */}
-            {introFrom && introTo && (() => {
-                const s = snapForStroke(
-                    introFrom.x, introFrom.y,
-                    introTo.x, introTo.y,
-                    ACTIVE_LINE_WIDTH
-                );
-                const stubLen = dist({ x: s.fromX, y: s.fromY }, { x: s.toX, y: s.toY });
-                return (
-                    <path
-                        d={`M ${s.fromX} ${s.fromY} L ${s.toX} ${s.toY}`}
-                        fill="none"
-                        stroke={ACTIVE_LINE_COLOR}
-                        strokeWidth={ACTIVE_LINE_WIDTH}
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        vectorEffect="non-scaling-stroke"
-                        shapeRendering="crispEdges"
-                        strokeDasharray={stubLen}
-                        strokeDashoffset={introDashoffset}
-                        filter="url(#line-glow)"
-                    />
-                );
-            })()}
+            {/* 4. Intro stub active */}
+            {introFrom && introTo && (
+                <path
+                    d={`M ${introFrom.x} ${introFrom.y} L ${introTo.x} ${introTo.y}`}
+                    fill="none"
+                    stroke={ACTIVE_LINE_COLOR}
+                    strokeWidth={ACTIVE_LINE_WIDTH}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeDasharray={introDasharray}
+                    strokeDashoffset={introDashoffset}
+                    vectorEffect="non-scaling-stroke"
+                />
+            )}
 
-            {/* 5. Real segments active (snapped) */}
+            {/* 5. Real segments active */}
             {linePathConfig.map((seg, index) => {
                 const fromA = anchors[seg.from];
                 const toA = anchors[seg.to];
                 if (!fromA || !toA) return null;
 
+                // gating: segment can't animate if future-locked by bubble
                 if (
                     !canDrawSegment(
                         index,
@@ -760,6 +695,8 @@ export function ProgressLine() {
                     return null;
                 }
 
+                // don't animate a future segment until tip reached its Y,
+                // except index 0 which can start immediately.
                 if (index !== 0) {
                     const segStartY = Math.min(fromA.y, toA.y);
                     if (tipY < segStartY) return null;
@@ -779,57 +716,46 @@ export function ProgressLine() {
                     tipY
                 );
 
-                const s = snapForStroke(
-                    fromA.x, fromA.y,
-                    toA.x, toA.y,
-                    ACTIVE_LINE_WIDTH
-                );
+                if (finalProg <= 0) {
+                    return null;
+                }
 
-                const segLen = dist({ x: s.fromX, y: s.fromY }, { x: s.toX, y: s.toY });
+                const segLen = dist(fromA, toA);
+                if (segLen <= 0) return null;
+
+                const dashArray = segLen;
                 const dashOffset = segLen * (1 - finalProg);
 
                 return (
                     <path
                         key={`active-${index}`}
-                        d={`M ${s.fromX} ${s.fromY} L ${s.toX} ${s.toY}`}
+                        d={`M ${fromA.x} ${fromA.y} L ${toA.x} ${toA.y}`}
                         fill="none"
                         stroke={ACTIVE_LINE_COLOR}
                         strokeWidth={ACTIVE_LINE_WIDTH}
                         strokeLinecap="round"
                         strokeLinejoin="round"
-                        vectorEffect="non-scaling-stroke"
-                        shapeRendering="crispEdges"
-                        strokeDasharray={segLen}
+                        strokeDasharray={dashArray}
                         strokeDashoffset={dashOffset}
-                        filter="url(#line-glow)"
+                        vectorEffect="non-scaling-stroke"
                     />
                 );
             })}
 
-            {/* 6. Tail active (snapped) */}
-            {tailFrom && tailTo && tailAnimatedVisible && (() => {
-                const s = snapForStroke(
-                    tailFrom.x, tailFrom.y,
-                    tailTo.x, tailTo.y,
-                    ACTIVE_LINE_WIDTH
-                );
-                const tailLen = dist({ x: s.fromX, y: s.fromY }, { x: s.toX, y: s.toY });
-                return (
-                    <path
-                        d={`M ${s.fromX} ${s.fromY} L ${s.toX} ${s.toY}`}
-                        fill="none"
-                        stroke={ACTIVE_LINE_COLOR}
-                        strokeWidth={ACTIVE_LINE_WIDTH}
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        vectorEffect="non-scaling-stroke"
-                        shapeRendering="crispEdges"
-                        strokeDasharray={tailLen}
-                        strokeDashoffset={tailDashoffset}
-                        filter="url(#line-glow)"
-                    />
-                );
-            })()}
+            {/* 6. Tail active */}
+            {tailFrom && tailTo && tailAnimatedVisible && (
+                <path
+                    d={`M ${tailFrom.x} ${tailFrom.y} L ${tailTo.x} ${tailTo.y}`}
+                    fill="none"
+                    stroke={ACTIVE_LINE_COLOR}
+                    strokeWidth={ACTIVE_LINE_WIDTH}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeDasharray={tailDasharray}
+                    strokeDashoffset={tailDashoffset}
+                    vectorEffect="non-scaling-stroke"
+                />
+            )}
         </svg>
     );
 }

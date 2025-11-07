@@ -2,6 +2,7 @@
 
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
+import {filipRealEvents, impactConfig} from '@/data/graphData';
 
 /* ==================== TYPES ==================== */
 export type AchievementData = {
@@ -28,30 +29,44 @@ type Props = {
     onClose: () => void;
 };
 
+/* Get impact scale data from graph data based on story article ID */
+function getImpactFromGraphData(storyId: string) {
+    const matchingEvent = filipRealEvents.find(event => event.article === storyId);
+
+    if (matchingEvent && matchingEvent.impactType !== 'None') {
+        return {
+            scale: matchingEvent.impactType,
+            color: impactConfig.legendColors[matchingEvent.impactType],
+        };
+    }
+
+    return {
+        scale: 'Regional' as const,
+        color: impactConfig.legendColors['Regional'],
+    };
+}
+
+
 /* ==================== COMPONENT ==================== */
-export default function AchievementModal({ data, isOpen, onClose }: Props) {
+export default function AchievementModal({data, isOpen, onClose}: Props) {
     const backdropRef = React.useRef<HTMLDivElement>(null);
     const containerRef = React.useRef<HTMLDivElement>(null);
     const [scrollProgress, setScrollProgress] = React.useState(0);
     const [activeSection, setActiveSection] = React.useState(0);
     const [isReading, setIsReading] = React.useState(false);
+    const [showTitle, setShowTitle] = React.useState(false);
+
+    // Arrow ref – used to replay animation on hero hover and on open
+    const arrowRef = React.useRef<SVGSVGElement | null>(null);
 
     /* Calculate read time from story text (~225 wpm), stripping most Markdown/noise */
     function calcReadTimeFromMarkdown(raw: string, wpm = 225): number {
-        /* strip images: ![alt](url) */
-        const noImages = raw.replace(/!\[[^\]]*]\([^)]*\)/g, " ");
-
-        /* strip fenced code blocks: ``` ... ``` */
-        const noCodeBlocks = noImages.replace(/```[\s\S]*?```/g, " ");
-
-        /* strip inline code: `code` */
-        const noInlineCode = noCodeBlocks.replace(/`[^`]*`/g, " ");
-
-        /* collapse punctuation to spaces */
-        const plain = noInlineCode.replace(/[^\w\s]|_/g, " ");
-
+        const noImages = raw.replace(/!\[[^\]]*]\([^)]*\)/g, ' ');
+        const noCodeBlocks = noImages.replace(/```[\s\S]*?```/g, ' ');
+        const noInlineCode = noCodeBlocks.replace(/`[^`]*`/g, ' ');
+        const plain = noInlineCode.replace(/[^\w\s]|_/g, ' ');
         const words = plain.trim().split(/\s+/).filter(Boolean).length;
-        return Math.max(1, Math.ceil(words / wpm)); // at least 1 minute
+        return Math.max(1, Math.ceil(words / wpm));
     }
 
     /* Track reading state */
@@ -84,25 +99,29 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
             if (e.key === 'Escape') onClose();
         };
 
-        /* Handle arrow key navigation */
         const handleArrowKeys = (e: KeyboardEvent) => {
             const container = containerRef.current;
             if (!container) return;
 
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
-                container.scrollBy({ top: 100, behavior: 'smooth' });
+                container.scrollBy({top: 100, behavior: 'smooth'});
             } else if (e.key === 'ArrowUp') {
                 e.preventDefault();
-                container.scrollBy({ top: -100, behavior: 'smooth' });
+                container.scrollBy({top: -100, behavior: 'smooth'});
             }
         };
 
+        // Lock body scroll (preserve page position)
+        const scrollY = window.scrollY;
+        document.body.style.position = 'fixed';
+        document.body.style.top = `-${scrollY}px`;
+        document.body.style.width = '100%';
+
         document.addEventListener('keydown', handleEsc);
         document.addEventListener('keydown', handleArrowKeys);
-        document.body.style.overflow = 'hidden';
 
-        /* RESET SCROLL TO TOP WHEN MODAL OPENS */
+        // Reset modal scroll to top
         const container = containerRef.current;
         if (container) {
             container.scrollTop = 0;
@@ -111,7 +130,12 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
         return () => {
             document.removeEventListener('keydown', handleEsc);
             document.removeEventListener('keydown', handleArrowKeys);
-            document.body.style.overflow = 'unset';
+
+            const storedTop = document.body.style.top;
+            document.body.style.position = '';
+            document.body.style.top = '';
+            document.body.style.width = '';
+            window.scrollTo(0, parseInt(storedTop || '0') * -1);
         };
     }, [isOpen, onClose]);
 
@@ -127,24 +151,31 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
             const progress = Math.min(1, scrolled / total);
             setScrollProgress(progress);
 
-            /* Determine active section based on scroll position */
-            const sections = [
-                { id: 'hero', index: 0 },
-                { id: 'stakes', index: 1 },
-                { id: 'story', index: 2 },
-                { id: 'insight', index: 3 }
+            // When hero is mostly gone, show small title
+            const heroSection = document.getElementById('hero');
+            if (heroSection) {
+                const heroRect = heroSection.getBoundingClientRect();
+                const containerRect = container.getBoundingClientRect();
+                const heroBottom = heroRect.bottom - containerRect.top;
+                setShowTitle(heroBottom < 100);
+            }
+
+            const sectionsMeta = [
+                {id: 'hero', index: 0},
+                {id: 'stakes', index: 1},
+                {id: 'story', index: 2},
+                {id: 'insight', index: 3},
             ];
 
             let current = 0;
 
-            sections.forEach(({ id, index }) => {
+            sectionsMeta.forEach(({id, index}) => {
                 const element = document.getElementById(id);
                 if (element) {
                     const rect = element.getBoundingClientRect();
                     const containerRect = container.getBoundingClientRect();
                     const relativeTop = rect.top - containerRect.top;
 
-                    /* Check if we've scrolled past the midpoint of this section */
                     if (relativeTop <= container.clientHeight * 0.5) {
                         current = index;
                     }
@@ -156,28 +187,34 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
 
         /* Intersection Observer for reveal animations */
         const observer = new IntersectionObserver(
-            (entries) => {
-                entries.forEach((entry) => {
-                    if (entry.isIntersecting) {
-                        entry.target.classList.add('in-view');
+            entries => {
+                entries.forEach(entry => {
+                    if (!entry.isIntersecting) return;
 
-                        /* Trigger counter animation for metrics */
-                        if (entry.target.classList.contains('metric-badge')) {
-                            const el = entry.target as HTMLElement;
-                            const finalText = el.dataset.value || el.textContent || '';
-                            animateValue(el, finalText);
-                        }
+                    entry.target.classList.add('in-view');
+
+                    if (entry.target.classList.contains('metric-badge')) {
+                        const el = entry.target as HTMLElement;
+
+                        // 🚫 Already animated? Do nothing.
+                        if (el.dataset.animated === 'true') return;
+
+                        // ✅ Mark as animated and run the counter once
+                        el.dataset.animated = 'true';
+
+                        const finalText = el.dataset.value || el.textContent || '';
+                        animateValue(el, finalText);
                     }
                 });
             },
-            { threshold: 0.05 }
+            {threshold: 0.05}
         );
 
-        const sections = container.querySelectorAll('.story-section, .metric-badge, .story-image');
-        sections.forEach((section) => observer.observe(section));
+        const observed = container.querySelectorAll('.story-section, .metric-badge, .story-image');
+        observed.forEach(section => observer.observe(section));
 
         container.addEventListener('scroll', handleScroll);
-        handleScroll(); /* Initial call */
+        handleScroll();
 
         return () => {
             container.removeEventListener('scroll', handleScroll);
@@ -193,7 +230,7 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
             return;
         }
 
-        const num = parseInt(match[1]);
+        const num = parseInt(match[1], 10);
         const prefix = value.substring(0, match.index || 0);
         const suffix = value.substring((match.index || 0) + match[1].length);
 
@@ -213,17 +250,41 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
         if (e.target === backdropRef.current) onClose();
     };
 
+    // Reusable: replay arrow bounce animation
+    const triggerArrowBounce = React.useCallback(() => {
+        const el = arrowRef.current;
+        if (!el) return;
+
+        el.classList.remove('scroll-arrow-anim');
+        void el.getBoundingClientRect(); // force reflow
+        el.classList.add('scroll-arrow-anim');
+    }, []);
+
+    // When modal opens, make the "Read the Story" arrow bounce once
+    React.useEffect(() => {
+        if (!isOpen) return;
+        const timeout = setTimeout(() => {
+            triggerArrowBounce();
+        }, 900); // after hero fades in
+        return () => clearTimeout(timeout);
+    }, [isOpen, triggerArrowBounce]);
+
     if (!isOpen || !data) return null;
 
-    /* Auto-calc read time from the story text */
-    const readTime = calcReadTimeFromMarkdown(data?.story ?? "");
+    const readTime = calcReadTimeFromMarkdown(data.story ?? '');
+    const impactData = getImpactFromGraphData(data.id);
+    const impactScale = impactData.scale;
+    const impactColor = impactData.color;
 
-    /* Section navigation */
+    const stakesStyle = {
+        '--impact-color': impactColor,
+    } as React.CSSProperties;
+
     const sections = [
-        { name: 'Intro', id: 'hero' },
-        { name: 'Stakes', id: 'stakes' },
-        { name: 'Story', id: 'story' },
-        { name: 'Insight', id: 'insight' }
+        {name: 'Intro', id: 'hero'},
+        {name: 'Stakes', id: 'stakes'},
+        {name: 'Story', id: 'story'},
+        {name: 'Insight', id: 'insight'},
     ];
 
     const scrollToSection = (id: string) => {
@@ -231,17 +292,14 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
         const container = containerRef.current;
         if (!element || !container) return;
 
-        /* Get the height of the sticky progress panel*/
-        const progressPanel = container.querySelector('.progress-system') as HTMLElement;
+        const progressPanel = container.querySelector('.progress-system') as HTMLElement | null;
         const panelHeight = progressPanel?.offsetHeight || 0;
-
-        /* Calculate position accounting for the sticky panel*/
         const elementPosition = element.offsetTop;
         const offsetPosition = elementPosition - panelHeight;
 
         container.scrollTo({
             top: offsetPosition,
-            behavior: 'smooth'
+            behavior: 'smooth',
         });
     };
 
@@ -253,22 +311,34 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
         >
             {/* Reading indicator */}
             <div className={`reading-indicator ${isReading ? 'active' : ''}`}>
-                <div className="reading-bar" />
+                <div className="reading-bar"/>
             </div>
 
-            <div ref={containerRef} className="achievement-modal-container">
-                {/* Progress system - INSIDE modal */}
+            <div
+                ref={containerRef}
+                className="achievement-modal-container"
+                onWheel={e => e.stopPropagation()}
+            >
+                {/* Progress system */}
                 <div className="progress-system">
-                    <div className="progress-bar" style={{ width: `${scrollProgress * 100}%` }} />
+                    <div className="progress-bar" style={{width: `${scrollProgress * 100}%`}}/>
 
-                    {/* Close button - moved inside panel */}
-                    <button className="close-btn-panel" onClick={onClose} aria-label="Close">
-                        <div className="close-icon">
-                            <span />
-                            <span />
+                    {/* LEFT SIDE - Impact Scale & Title */}
+                    <div className={`panel-left ${showTitle ? 'panel-left-shifted' : ''}`}>
+                        <div className="impact-scale">
+                            <div
+                                className="impact-dot"
+                                style={{background: impactColor}}
+                            />
+                            <span className="impact-label">{impactScale}</span>
                         </div>
-                    </button>
 
+                        <div className={`panel-title ${showTitle ? 'visible' : ''}`}>
+                            {data.title}
+                        </div>
+                    </div>
+
+                    {/* CENTER - Section Dots */}
                     <div className="section-dots">
                         {sections.map((section, i) => (
                             <button
@@ -277,21 +347,33 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                                 onClick={() => scrollToSection(section.id)}
                                 aria-label={`Jump to ${section.name}`}
                             >
-                                <span className="section-dot-inner" />
+                                <span className="section-dot-inner"/>
                                 <span className="section-label">{section.name}</span>
                             </button>
                         ))}
                     </div>
+
+                    {/* RIGHT SIDE - Close button */}
+                    <button className="close-btn-panel" onClick={onClose} aria-label="Close">
+                        <div className="close-icon">
+                            <span/>
+                            <span/>
+                        </div>
+                    </button>
                 </div>
 
                 {/* HERO */}
-                <div id="hero" className="hero-section">
+                <div
+                    id="hero"
+                    className="hero-section"
+                    onMouseEnter={triggerArrowBounce} // replay arrow animation on hero hover
+                >
                     {data.images[0] && (
-                        <>
-                            <img src={data.images[0]} alt={data.title} className="hero-image" />
-                            <div className="hero-overlay" />
-                            <div className="hero-grid" />
-                        </>
+                        <div className="hero-media">
+                            <img src={data.images[0]} alt={data.title} className="hero-image"/>
+                            <div className="hero-overlay"/>
+                            <div className="hero-grid"/>
+                        </div>
                     )}
 
                     <div className="hero-content">
@@ -310,21 +392,33 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                         <p className="hero-hook">{data.hook}</p>
                     </div>
 
-                    {/* Scroll indicator */}
                     <button
                         className="scroll-indicator"
                         onClick={() => scrollToSection('stakes')}
                         aria-label="Scroll to story"
                     >
                         <span className="scroll-text">Read the Story</span>
-                        <svg className="scroll-arrow" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M12 5v14M19 12l-7 7-7-7" />
+                        <svg
+                            ref={arrowRef}
+                            className="scroll-arrow"
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                        >
+                            <path d="M12 5v14M19 12l-7 7-7-7"/>
                         </svg>
                     </button>
                 </div>
 
                 {/* STAKES */}
-                <div id="stakes" className="story-section stakes-section">
+                <div
+                    id="stakes"
+                    className="story-section stakes-section"
+                    style={stakesStyle}
+                >
                     <div className="section-header">
                         <span className="section-number">01</span>
                         <span className="section-title">THE STAKES</span>
@@ -334,8 +428,9 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                         <div className="stake-card challenge">
                             <div className="stake-header">
                                 <div className="stake-icon">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         strokeWidth="2">
+                                        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
                                     </svg>
                                 </div>
                                 <div className="stake-label">Challenge</div>
@@ -344,16 +439,17 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                         </div>
 
                         <div className="stakes-divider">
-                            <span className="divider-line" />
+                            <span className="divider-line"/>
                             <span className="divider-arrow">→</span>
-                            <span className="divider-line" />
+                            <span className="divider-line"/>
                         </div>
 
                         <div className="stake-card outcome">
                             <div className="stake-header">
                                 <div className="stake-icon">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <polyline points="20 6 9 17 4 12" />
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         strokeWidth="2">
+                                        <polyline points="20 6 9 17 4 12"/>
                                     </svg>
                                 </div>
                                 <div className="stake-label">Outcome</div>
@@ -372,7 +468,7 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                                     key={i}
                                     className="metric-badge"
                                     data-value={metric}
-                                    style={{ animationDelay: `${i * 0.1}s` }}
+                                    style={{animationDelay: `${i * 0.1}s`}}
                                 >
                                     {metric}
                                 </div>
@@ -389,9 +485,10 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                             <span className="section-title">THE STORY</span>
                         </div>
                         <div className="read-time-wrapper">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <circle cx="12" cy="12" r="10" />
-                                <path d="M12 6v6l4 2" />
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 strokeWidth="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <path d="M12 6v6l4 2"/>
                             </svg>
                             <span>{readTime} MIN READ</span>
                         </div>
@@ -399,22 +496,34 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
 
                     <ReactMarkdown
                         components={{
-                            h2: ({ children, ...props }) => (
+                            h2: ({children, ...props}) => (
                                 <h2 className="story-h2" {...props}>
-                                    <span className="h2-marker" />
+                                    <span className="h2-marker">
+                                        <svg
+                                            className="h2-arrow"
+                                            width="20"
+                                            height="20"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                        >
+                                            <path d="M5 12h14M12 5l7 7-7 7"/>
+                                        </svg>
+                                    </span>
                                     {children}
                                 </h2>
                             ),
-                            h3: ({ children, ...props }) => (
+                            h3: ({children, ...props}) => (
                                 <h3 className="story-h3" {...props}>{children}</h3>
                             ),
-                            p: ({ children, ...props }) => {
+                            p: ({children, ...props}) => {
                                 const text = children?.toString() || '';
-
-                                /* Handle inline images*/
                                 const imageMatch = text.match(/!\[IMAGE-(\d+)\]/);
                                 if (imageMatch) {
-                                    const idx = parseInt(imageMatch[1]);
+                                    const idx = parseInt(imageMatch[1], 10);
                                     const img = data.images[idx];
                                     if (!img) return null;
 
@@ -425,8 +534,8 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                                     return (
                                         <figure className="story-image">
                                             <div className="image-wrapper">
-                                                <img src={imagePath} alt={caption || ''} />
-                                                <div className="image-border" />
+                                                <img src={imagePath} alt={caption || ''}/>
+                                                <div className="image-border"/>
                                             </div>
                                             {caption && <figcaption>{caption}</figcaption>}
                                         </figure>
@@ -435,22 +544,22 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
 
                                 return <p className="story-p" {...props}>{children}</p>;
                             },
-                            ul: ({ children, ...props }) => (
+                            ul: ({children, ...props}) => (
                                 <ul className="story-list" {...props}>{children}</ul>
                             ),
-                            ol: ({ children, ...props }) => (
+                            ol: ({children, ...props}) => (
                                 <ol className="story-list ordered" {...props}>{children}</ol>
                             ),
-                            li: ({ children, ...props }) => (
+                            li: ({children, ...props}) => (
                                 <li className="story-li" {...props}>{children}</li>
                             ),
-                            blockquote: ({ children, ...props }) => (
+                            blockquote: ({children, ...props}) => (
                                 <blockquote className="story-quote" {...props}>
                                     <span className="quote-mark">|</span>
                                     {children}
                                 </blockquote>
                             ),
-                            strong: ({ ...props }) => <strong className="story-emphasis" {...props} />,
+                            strong: ({...props}) => <strong className="story-emphasis" {...props} />,
                         }}
                     >
                         {data.story}
@@ -487,13 +596,18 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    padding: 20px;
+                    padding: clamp(12px, 3vw, 20px);
                     animation: fadeIn 0.3s ease-out;
+                    overflow: hidden;
                 }
 
                 @keyframes fadeIn {
-                    from { opacity: 0; }
-                    to { opacity: 1; }
+                    from {
+                        opacity: 0;
+                    }
+                    to {
+                        opacity: 1;
+                    }
                 }
 
                 /* READING INDICATOR */
@@ -515,32 +629,42 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                 .reading-bar {
                     width: 100%;
                     height: 100%;
-                    background: linear-gradient(90deg, 
-                        transparent 0%,
-                        rgba(255, 255, 255, 0.8) 50%,
-                        transparent 100%
+                    background: linear-gradient(90deg,
+                    transparent 0%,
+                    rgba(255, 255, 255, 0.8) 50%,
+                    transparent 100%
                     );
                     animation: scan 1.5s linear infinite;
                 }
 
                 @keyframes scan {
-                    from { transform: translateX(-100%); }
-                    to { transform: translateX(100%); }
+                    from {
+                        transform: translateX(-100%);
+                    }
+                    to {
+                        transform: translateX(100%);
+                    }
                 }
 
-                /* MODAL CONTAINER - LOCKED ASPECT RATIO WITH VIEWPORT CONSTRAINT */
+                /* MODAL CONTAINER - Fully responsive */
                 .achievement-modal-container {
-                    width: min(85vw, 85vh);
-                    height: min(85vw, 85vh);
-                    max-width: 900px;
-                    max-height: 900px;
-                    background: #000000;
+                    width: 100%;
+                    height: 100%;
+                    max-width: min(900px, 90vw);
+                    max-height: min(900px, 90vh);
+                    background: #000;
                     border: 1px solid rgba(255, 255, 255, 0.1);
                     overflow-y: auto;
                     overflow-x: hidden;
                     animation: slideIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
                     scroll-behavior: smooth;
                     position: relative;
+                    scrollbar-width: none;
+                    -ms-overflow-style: none;
+                }
+
+                .achievement-modal-container::-webkit-scrollbar {
+                    display: none;
                 }
 
                 @keyframes slideIn {
@@ -554,7 +678,7 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     }
                 }
 
-                /* PROGRESS SYSTEM - NOW INSIDE MODAL */
+                /* PROGRESS SYSTEM - Fully responsive */
                 .progress-system {
                     position: sticky;
                     top: 0;
@@ -564,6 +688,12 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     background: rgba(0, 0, 0, 0.95);
                     backdrop-filter: blur(10px);
                     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                    display: grid;
+                    grid-template-columns: 1fr auto 1fr;
+                    align-items: center;
+                    padding: 0 clamp(12px, 3vw, 20px);
+                    height: clamp(50px, 10vh, 60px);
+                    overflow: hidden;
                 }
 
                 .progress-bar {
@@ -575,60 +705,71 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
                 }
 
-                /* Close button inside panel */
-                .close-btn-panel {
-                    position: absolute;
-                    top: 50%;
-                    right: 20px;
-                    transform: translateY(-50%);
-                    width: 32px;
-                    height: 32px;
-                    background: transparent;
-                    border: 1px solid rgba(255, 255, 255, 0.2);
-                    cursor: pointer;
-                    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-                    overflow: hidden;
-                }
-
-                .close-btn-panel:hover {
-                    border-color: rgba(255, 255, 255, 0.8);
-                    transform: translateY(-50%) rotate(90deg);  /* ← ADDED THIS! */
-                }
-
-                .close-icon {
+                .panel-left {
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                    align-items: flex-start;
+                    gap: 0;
+                    height: 100%;
                     position: relative;
-                    width: 14px;
-                    height: 14px;
-                    margin: auto;
+                    transform: translateY(0);
+                    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
                 }
 
-                .close-icon span {
-                    position: absolute;
-                    top: 50%;
-                    left: 0;
-                    width: 100%;
-                    height: 1px;
-                    background: rgba(255, 255, 255, 0.8);
-                    transition: transform 0.3s ease, background 0.3s ease;  /* ← ADDED background */
+                .panel-left.panel-left-shifted {
+                    transform: translateY(2px);
                 }
 
-                .close-icon span:first-child {
-                    transform: translateY(-50%) rotate(45deg);
+                .impact-scale {
+                    display: flex;
+                    align-items: center;
+                    gap: clamp(6px, 1.5vw, 8px);
                 }
 
-                .close-icon span:last-child {
-                    transform: translateY(-50%) rotate(-45deg);
+                .impact-dot {
+                    width: clamp(8px, 1.8vw, 10px);
+                    height: clamp(8px, 1.8vw, 10px);
+                    border-radius: 50%;
                 }
 
-                .close-btn-panel:hover .close-icon span {
-                    background: #FFFFFF;
+                .impact-label {
+                    font: 600 clamp(9px, 2vw, 11px)/1 'Rajdhani', monospace;
+                    letter-spacing: 0.12em;
+                    text-transform: uppercase;
+                    color: rgba(255, 255, 255, 0.8);
+                    white-space: nowrap;
+                }
+
+                .panel-title {
+                    font: 600 clamp(11px, 2.2vw, 13px)/1.2 'Rajdhani', monospace;
+                    color: rgba(255, 255, 255, 0.8);
+                    opacity: 0;
+                    transform: translateY(12px);
+                    max-width: clamp(160px, 35vw, 220px);
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                    max-height: 0;
+                    margin-top: 0;
+                    transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+                    transform 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+                    max-height 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+                }
+
+                .panel-title.visible {
+                    opacity: 1;
+                    transform: translateY(0);
+                    max-height: 40px;
+                    margin-top: clamp(4px, 1.2vw, 6px);
                 }
 
                 .section-dots {
                     display: flex;
-                    gap: 32px;
+                    gap: clamp(16px, 5vw, 32px);
                     justify-content: center;
-                    padding: 14px 20px;
+                    align-items: center;
+                    transform: translateY(2px);
                 }
 
                 .section-dot {
@@ -636,11 +777,11 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     background: transparent;
                     border: none;
                     cursor: pointer;
-                    padding: 8px;
+                    padding: clamp(6px, 1.5vw, 8px);
                     display: flex;
                     flex-direction: column;
                     align-items: center;
-                    gap: 8px;
+                    gap: clamp(6px, 1.5vw, 8px);
                     transition: all 0.3s ease;
                 }
 
@@ -649,8 +790,8 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                 }
 
                 .section-dot-inner {
-                    width: 10px;
-                    height: 10px;
+                    width: clamp(8px, 1.8vw, 10px);
+                    height: clamp(8px, 1.8vw, 10px);
                     background: rgba(255, 255, 255, 0.2);
                     border: 2px solid rgba(255, 255, 255, 0.4);
                     border-radius: 50%;
@@ -670,7 +811,7 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                 }
 
                 .section-label {
-                    font: 400 10px/1 'Rajdhani', monospace;
+                    font: 400 clamp(8px, 1.8vw, 10px)/1 'Rajdhani', monospace;
                     letter-spacing: 0.12em;
                     text-transform: uppercase;
                     color: rgba(255, 255, 255, 0.5);
@@ -686,32 +827,83 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     color: rgba(255, 255, 255, 0.8);
                 }
 
-                /* HERO SECTION */
+                .close-btn-panel {
+                    width: clamp(28px, 6vw, 32px);
+                    height: clamp(28px, 6vw, 32px);
+                    background: transparent;
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    cursor: pointer;
+                    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+                    overflow: hidden;
+                    justify-self: end;
+                }
+
+                .close-btn-panel:hover {
+                    border-color: rgba(255, 255, 255, 0.8);
+                    transform: rotate(90deg);
+                }
+
+                .close-icon {
+                    position: relative;
+                    width: clamp(12px, 2.5vw, 14px);
+                    height: clamp(12px, 2.5vw, 14px);
+                    margin: auto;
+                }
+
+                .close-icon span {
+                    position: absolute;
+                    top: 50%;
+                    left: 0;
+                    width: 100%;
+                    height: 1px;
+                    background: rgba(255, 255, 255, 0.8);
+                    transition: transform 0.3s ease, background 0.3s ease;
+                }
+
+                .close-icon span:first-child {
+                    transform: translateY(-50%) rotate(45deg);
+                }
+
+                .close-icon span:last-child {
+                    transform: translateY(-50%) rotate(-45deg);
+                }
+
+                .close-btn-panel:hover .close-icon span {
+                    background: #fff;
+                }
+
+                /* HERO SECTION - Fully responsive */
                 .hero-section {
                     position: relative;
                     width: 100%;
-                    aspect-ratio: 4 / 3; /* FIXED: Always 4:3 ratio */
+                    aspect-ratio: 4 / 3;
                     display: flex;
                     align-items: flex-end;
                     overflow: hidden;
                 }
 
-                .hero-image {
+                .hero-media {
                     position: absolute;
                     inset: 0;
+                    overflow: hidden;
+                }
+
+                .hero-image {
                     width: 100%;
                     height: 100%;
-                    object-fit: cover; /* Keeps this so image fills the fixed container */
-                    object-position: center; /* Centers the image within the 4:3 container */
+                    object-fit: cover;
+                    object-position: center;
+                    display: block;
                 }
 
                 .hero-overlay {
                     position: absolute;
                     inset: 0;
-                    background: linear-gradient(to bottom,
-                        rgba(0,0,0,0.2) 0%,
-                        rgba(0,0,0,0.7) 60%,
-                        rgba(0,0,0,0.95) 100%
+                    background: linear-gradient(
+                            to bottom,
+                            rgba(0, 0, 0, 0.2) 0%,
+                            rgba(0, 0, 0, 0.7) 60%,
+                            rgba(0, 0, 0, 0.95) 100%
                     );
                 }
 
@@ -722,22 +914,22 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                 .hero-content {
                     position: relative;
                     z-index: 2;
-                    padding: 60px;
+                    padding: clamp(30px, 8vw, 60px);
                     width: 100%;
                 }
 
                 .hero-meta {
                     display: flex;
                     align-items: center;
-                    gap: 8px;
-                    margin-bottom: 16px;
+                    gap: clamp(10px, 2.5vw, 16px);
+                    margin-bottom: 2px;
                     opacity: 0;
                     animation: fadeInUp 0.6s 0.2s ease forwards;
                     flex-wrap: wrap;
                 }
 
                 .meta-item {
-                    font: 400 11px/1 'Rajdhani', monospace;
+                    font: 400 clamp(9px, 2vw, 11px)/1 'Rajdhani', monospace;
                     letter-spacing: 0.15em;
                     text-transform: uppercase;
                     color: rgba(255, 255, 255, 0.6);
@@ -748,9 +940,9 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                 }
 
                 .hero-title {
-                    font: 700 clamp(42px, 6vw, 64px)/1 'Rajdhani', monospace;
-                    color: #FFFFFF;
-                    margin: 0 0 18px 0;
+                    font: 700 clamp(28px, 7vw, 64px)/1 'Rajdhani', monospace;
+                    color: #fff;
+                    margin: 0 0 clamp(8px, 2vw, 10px) 0;
                     letter-spacing: -0.02em;
                     opacity: 0;
                     animation: fadeInUp 0.6s 0.3s ease forwards;
@@ -761,23 +953,8 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     position: relative;
                 }
 
-                .title-word::after {
-                    content: '';
-                    position: absolute;
-                    bottom: 0;
-                    left: 0;
-                    width: 0;
-                    height: 2px;
-                    background: rgba(255, 255, 255, 0.3);
-                    transition: width 0.5s ease;
-                }
-
-                .hero-section:hover .title-word::after {
-                    width: 100%;
-                }
-
                 .hero-hook {
-                    font: 400 clamp(18px, 2.5vw, 22px)/1.4 'Rajdhani', monospace;
+                    font: 400 clamp(14px, 3vw, 22px)/1.4 'Rajdhani', monospace;
                     color: rgba(255, 255, 255, 0.9);
                     margin: 0 0 6px 0;
                     max-width: 650px;
@@ -785,14 +962,12 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     animation: fadeInUp 0.6s 0.4s ease forwards;
                 }
 
-                /* Scroll indicator - POSITIONED AT BOTTOM */
                 .scroll-indicator {
                     position: absolute;
-                    bottom: -15px;
+                    bottom: clamp(-10px, -2vw, -15px);
                     left: 0;
                     right: 0;
                     margin: 0 auto;
-                    transform: none;
                     width: max-content;
                     background: transparent;
                     border: none;
@@ -801,11 +976,11 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     opacity: 0;
                     animation: fadeInUp 0.8s 0.8s ease forwards;
                     transition: transform 0.3s ease;
-                    padding: 20px;
+                    padding: clamp(15px, 3vw, 20px);
                     display: flex;
                     flex-direction: column;
                     align-items: center;
-                    gap: 8px;
+                    gap: clamp(6px, 1.5vw, 8px);
                 }
 
                 .scroll-indicator:hover {
@@ -813,7 +988,7 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                 }
 
                 .scroll-text {
-                    font: 400 13px/1 'Rajdhani', monospace;
+                    font: 400 clamp(10px, 2.2vw, 13px)/1 'Rajdhani', monospace;
                     letter-spacing: 0.12em;
                     text-transform: uppercase;
                     color: rgba(255, 255, 255, 0.7);
@@ -826,10 +1001,15 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                 }
 
                 .scroll-arrow {
-                    animation: scrollBounce 2s ease-in-out infinite;
                     stroke: rgba(255, 255, 255, 0.5);
                     transition: stroke 0.3s ease;
                     display: block;
+                    width: clamp(20px, 4vw, 24px);
+                    height: clamp(20px, 4vw, 24px);
+                }
+
+                .scroll-arrow-anim {
+                    animation: scrollBounce 1.2s ease-in-out 1;
                 }
 
                 .scroll-indicator:hover .scroll-arrow {
@@ -850,23 +1030,23 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                 }
 
                 @keyframes fadeInUp {
-                    to {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
                     from {
                         opacity: 0;
                         transform: translateY(20px);
                     }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
                 }
 
-                /* SECTION HEADERS - CONSISTENT WIDTH */
+                /* SECTION HEADERS - Fully responsive */
                 .section-header {
                     display: flex;
                     align-items: center;
-                    gap: 16px;
-                    margin-bottom: 40px;
-                    padding: 0 60px 16px 60px;
+                    gap: clamp(12px, 2.5vw, 16px);
+                    margin-bottom: clamp(30px, 6vw, 40px);
+                    padding: 0 clamp(30px, 6vw, 60px) clamp(12px, 2.5vw, 16px) clamp(30px, 6vw, 60px);
                     max-width: 900px;
                     margin-left: auto;
                     margin-right: auto;
@@ -878,8 +1058,8 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     content: '';
                     position: absolute;
                     bottom: 0;
-                    left: 50px;
-                    right: 50px;
+                    left: 30px;
+                    right: 30px;
                     height: 1px;
                     background: rgba(255, 255, 255, 0.2);
                 }
@@ -887,48 +1067,52 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                 .section-header > div:first-child {
                     display: flex;
                     align-items: center;
-                    gap: 16px;
+                    gap: clamp(12px, 2.5vw, 16px);
                 }
 
                 .section-number {
-                    font: 700 32px/1 'Rajdhani', monospace;
+                    font: 700 clamp(24px, 5vw, 32px)/1 'Rajdhani', monospace;
                     color: rgba(255, 255, 255, 0.5);
                     letter-spacing: -0.02em;
                 }
 
                 .section-title {
-                    font: 500 11px/1 'Rajdhani', monospace;
+                    font: 500 clamp(9px, 2vw, 11px)/1 'Rajdhani', monospace;
                     letter-spacing: 0.2em;
                     text-transform: uppercase;
                     color: rgba(255, 255, 255, 0.7);
                 }
 
-                /* STAKES SECTION */
+                /* STAKES SECTION - Fully responsive */
                 .stakes-section {
-                    padding: 50px 0;
-                    background: linear-gradient(to bottom,
-                        rgba(255, 255, 255, 0.02) 0%,
-                        transparent 100%
+                    padding: clamp(30px, 6vw, 50px) 0;
+                    background: linear-gradient(
+                            to bottom,
+                            rgba(255, 255, 255, 0.02) 0%,
+                            transparent 100%
                     );
                 }
 
                 .stakes-container {
                     display: grid;
                     grid-template-columns: 1fr auto 1fr;
-                    gap: 30px;
-                    align-items: center;
+                    gap: clamp(20px, 4vw, 30px);
+                    align-items: stretch;
                     max-width: 900px;
                     margin: 0 auto;
-                    padding: 0 60px;
+                    padding: 0 clamp(30px, 6vw, 60px);
                 }
 
                 .stake-card {
-                    padding: 28px;
+                    padding: clamp(20px, 4vw, 28px);
                     background: rgba(255, 255, 255, 0.05);
                     border: 1px solid rgba(255, 255, 255, 0.15);
                     position: relative;
                     overflow: hidden;
                     transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+                    display: flex;
+                    flex-direction: column;
+                    height: 100%;
                 }
 
                 .stake-card::before {
@@ -938,10 +1122,10 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     left: -100%;
                     width: 100%;
                     height: 1px;
-                    background: linear-gradient(90deg, 
-                        transparent 0%,
-                        rgba(255, 215, 0, 0.8) 50%,
-                        transparent 100%
+                    background: linear-gradient(90deg,
+                    transparent 0%,
+                    color-mix(in srgb, var(--impact-color, rgba(255, 255, 255, 0.5)) 80%, transparent) 50%,
+                    transparent 100%
                     );
                     transition: left 0.6s ease;
                 }
@@ -951,10 +1135,10 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     position: absolute;
                     inset: -2px;
                     border-radius: inherit;
-                    background: linear-gradient(135deg, 
-                        rgba(255, 215, 0, 0) 0%,
-                        rgba(255, 215, 0, 0.15) 50%,
-                        rgba(255, 215, 0, 0) 100%
+                    background: linear-gradient(135deg,
+                    rgba(0, 0, 0, 0) 0%,
+                    color-mix(in srgb, var(--impact-color, rgba(255, 255, 255, 0.5)) 25%, transparent) 50%,
+                    rgba(0, 0, 0, 0) 100%
                     );
                     opacity: 0;
                     transition: opacity 0.4s ease;
@@ -962,10 +1146,10 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                 }
 
                 .stake-card:hover {
-                    background: rgba(255, 255, 255, 0.08);
-                    border-color: rgba(255, 215, 0, 0.6);
+                    background: rgba(255, 255, 255, 0.05);
+                    border-color: var(--impact-color, rgba(255, 255, 255, 0.5));
                     transform: translateY(-4px) scale(1.02);
-                    box-shadow: 0 8px 32px rgba(255, 215, 0, 0.2);
+                    box-shadow: 0 8px 32px color-mix(in srgb, var(--impact-color, rgba(255, 255, 255, 0.5)) 30%, transparent);
                 }
 
                 .stake-card:hover::before {
@@ -979,13 +1163,13 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                 .stake-header {
                     display: flex;
                     align-items: center;
-                    gap: 10px;
-                    margin-bottom: 16px;
+                    gap: clamp(8px, 1.8vw, 10px);
+                    margin-bottom: clamp(12px, 2.5vw, 16px);
                 }
 
                 .stake-icon {
-                    width: 20px;
-                    height: 20px;
+                    width: clamp(16px, 3.5vw, 20px);
+                    height: clamp(16px, 3.5vw, 20px);
                     display: flex;
                     align-items: center;
                     justify-content: center;
@@ -999,13 +1183,13 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                 }
 
                 .stake-card:hover .stake-icon svg {
-                    stroke: rgba(255, 215, 0, 0.95);
-                    filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.6));
+                    stroke: var(--impact-color, rgba(255, 255, 255, 0.8));
+                    filter: drop-shadow(0 0 8px color-mix(in srgb, var(--impact-color, rgba(255, 255, 255, 0.5)) 60%, transparent));
                     transform: scale(1.1);
                 }
 
                 .stake-label {
-                    font: 600 11px/1 'Rajdhani', monospace;
+                    font: 600 clamp(9px, 2vw, 11px)/1 'Rajdhani', monospace;
                     letter-spacing: 0.2em;
                     text-transform: uppercase;
                     color: rgba(255, 255, 255, 0.7);
@@ -1013,12 +1197,12 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                 }
 
                 .stake-card:hover .stake-label {
-                    color: rgba(255, 215, 0, 0.95);
-                    text-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
+                    color: rgba(255, 255, 255, 0.95);
+                    text-shadow: 0 0 12px rgba(255, 255, 255, 0.4);
                 }
 
                 .stake-card p {
-                    font: 400 16px/1.6 'Rajdhani', monospace;
+                    font: 400 clamp(14px, 2.8vw, 16px)/1.6 'Rajdhani', monospace;
                     color: rgba(255, 255, 255, 0.9);
                     margin: 0;
                     transition: color 0.4s ease, text-shadow 0.4s ease;
@@ -1034,24 +1218,24 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                 .stakes-divider {
                     display: flex;
                     align-items: center;
-                    gap: 12px;
+                    gap: clamp(8px, 2vw, 12px);
                 }
 
                 .divider-line {
-                    width: 20px;
+                    width: clamp(15px, 3vw, 20px);
                     height: 1px;
                     background: rgba(255, 255, 255, 0.1);
                 }
 
                 .divider-arrow {
-                    font-size: 20px;
+                    font-size: clamp(16px, 3.5vw, 20px);
                     color: rgba(255, 255, 255, 0.3);
                 }
 
-                /* METRICS */
+                /* METRICS - Fully responsive */
                 .metrics-section {
-                    padding: 20px 60px 40px 60px;
-                    background: #000000;
+                    padding: clamp(15px, 3vw, 20px) clamp(30px, 6vw, 60px) clamp(30px, 6vw, 40px) clamp(30px, 6vw, 60px);
+                    background: #000;
                     position: relative;
                     overflow: hidden;
                 }
@@ -1069,18 +1253,17 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                 .metrics-grid {
                     display: flex;
                     flex-wrap: wrap;
-                    gap: 16px;
+                    gap: clamp(12px, 2.5vw, 16px);
                     justify-content: center;
-                    position: relative;
                 }
 
                 .metric-badge {
-                    padding: 16px 24px;
-                    background: #000000;
+                    padding: clamp(12px, 2.5vw, 16px) clamp(16px, 3.5vw, 24px);
+                    background: #000;
                     border: 1px solid rgba(255, 255, 255, 0.1);
                     position: relative;
                     overflow: hidden;
-                    font: 600 14px/1 'Rajdhani', monospace;
+                    font: 600 clamp(12px, 2.5vw, 14px)/1 'Rajdhani', monospace;
                     letter-spacing: 0.08em;
                     color: rgba(255, 255, 255, 0.9);
                     text-transform: uppercase;
@@ -1096,56 +1279,49 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     }
                 }
 
-                /* STORY CONTENT */
+                /* STORY CONTENT - Fully responsive */
                 .story-content {
-                    padding: 50px 0;
+                    padding: clamp(30px, 6vw, 50px) 0;
                     max-width: 900px;
                     margin: 0 auto;
                 }
 
                 .story-content .section-header {
-                    position: relative;
-                    display: flex;
-                    align-items: center;
-                    gap: 16px;
-                    margin: 0 0 50px 0;
-                    padding: 0 60px 16px 60px;
+                    margin: 0 0 clamp(35px, 7vw, 50px) 0;
+                    padding: 0 clamp(30px, 6vw, 60px) clamp(12px, 2.5vw, 16px) clamp(30px, 6vw, 60px);
                 }
 
                 .story-content .section-header::after {
-                    content: '';
-                    position: absolute;
-                    bottom: 0;
-                    left: 50px;
-                    right: 50px;
-                    height: 1px;
-                    background: rgba(255, 255, 255, 0.2);
+                    left: 30px;
+                    right: 30px;
                 }
 
                 .story-content .section-header > div:first-child {
                     display: flex;
                     align-items: center;
-                    gap: 16px;
+                    gap: clamp(12px, 2.5vw, 16px);
                 }
 
-                .story-content .section-header .read-time-wrapper {
+                .read-time-wrapper {
                     position: absolute;
-                    right: 60px;
+                    right: clamp(30px, 6vw, 60px);
                     top: 50%;
                     transform: translateY(-50%);
                     display: flex;
                     align-items: center;
-                    gap: 6px;
-                    font: 400 11px/1 'Rajdhani', monospace;
+                    gap: clamp(4px, 1vw, 6px);
+                    font: 400 clamp(9px, 2vw, 11px)/1 'Rajdhani', monospace;
                     letter-spacing: 0.15em;
                     text-transform: uppercase;
                     color: rgba(255, 255, 255, 0.6);
                     white-space: nowrap;
                 }
 
-                .story-content .section-header .read-time-wrapper svg {
+                .read-time-wrapper svg {
                     opacity: 0.7;
                     flex-shrink: 0;
+                    width: clamp(10px, 2.2vw, 12px);
+                    height: clamp(10px, 2.2vw, 12px);
                 }
 
                 .story-h2,
@@ -1154,59 +1330,71 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                 .story-image,
                 .story-quote,
                 .story-list {
-                    max-width: 550px;
+                    max-width: min(550px, 90%);
                     margin-left: auto;
                     margin-right: auto;
                 }
-                
+
+                /* PREMIUM H2 MARKER - Clean SVG arrow */
                 .story-h2 {
-                    font: 700 clamp(28px, 3.5vw, 34px)/1.2 'Rajdhani', monospace;
-                    color: #FFFFFF;
-                    margin: 60px auto 24px auto;
+                    font: 700 clamp(22px, 4.5vw, 34px)/1.2 'Rajdhani', monospace;
+                    color: #fff;
+                    margin: clamp(40px, 8vw, 60px) auto clamp(18px, 3.5vw, 24px) auto;
                     position: relative;
-                    padding-left: 24px;
+                    padding-left: 0;
                 }
 
                 .h2-marker {
                     position: absolute;
                     left: 0;
                     top: 50%;
-                    transform: translateY(-50%);
-                    width: 12px;
-                    height: 12px;
-                    border: 1px solid rgba(255, 255, 255, 0.3);
-                    background: transparent;
-                    transition: all 0.3s ease;
+                    transform: translateY(-50%) translateX(calc(-100% - clamp(20px, 4vw, 28px)));
+                    width: clamp(18px, 3.5vw, 22px);
+                    height: clamp(18px, 3.5vw, 22px);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
                 }
 
-                .story-h2:hover .h2-marker {
-                    background: rgba(255, 255, 255, 0.1);
-                    transform: translateY(-50%) rotate(45deg);
+                .h2-arrow {
+                    width: 100%;
+                    height: 100%;
+                    color: rgba(255, 255, 255, 0.35);
+                    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+                    /* Start pointing right */
+                    transform: rotate(0deg);
+                }
+
+                /* Hover: arrow rotates to point down and brightens */
+                .story-h2:hover .h2-arrow {
+                    color: rgba(255, 255, 255, 0.85);
+                    transform: rotate(90deg);
+                    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.3));
                 }
 
                 .story-h3 {
-                    font: 600 clamp(20px, 2.5vw, 24px)/1.3 'Rajdhani', monospace;
+                    font: 600 clamp(17px, 3.5vw, 24px)/1.3 'Rajdhani', monospace;
                     color: rgba(255, 255, 255, 0.9);
-                    margin: 40px auto 16px auto;
+                    margin: clamp(30px, 6vw, 40px) auto clamp(12px, 2.5vw, 16px) auto;
                     position: relative;
-                    padding-left: 16px;
+                    padding-left: clamp(20px, 4vw, 24px);
                 }
 
                 .story-h3::before {
-                    content: '//';
+                    content: '// ';
                     position: absolute;
                     left: 0;
                     color: rgba(255, 255, 255, 0.2);
                 }
 
                 .story-p {
-                    font: 400 17px/1.7 'Rajdhani', monospace;
+                    font: 400 clamp(15px, 3vw, 17px)/1.7 'Rajdhani', monospace;
                     color: rgba(255, 255, 255, 0.75);
-                    margin: 20px auto;
+                    margin: clamp(16px, 3vw, 20px) auto;
                 }
 
                 .story-emphasis {
-                    color: #FFFFFF;
+                    color: #fff;
                     font-weight: 600;
                     position: relative;
                 }
@@ -1226,35 +1414,35 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                 .story-emphasis:hover::after {
                     transform: scaleX(1);
                 }
-                
+
                 .story-list {
-                    margin: 16px auto;
-                    padding-left: 1.25rem;
+                    margin: clamp(12px, 2.5vw, 16px) auto;
+                    padding-left: clamp(1rem, 3vw, 1.25rem);
                     list-style-position: outside;
                 }
-                
-                .story-list.ordered { 
-                    list-style-type: decimal; 
+
+                .story-list.ordered {
+                    list-style-type: decimal;
                 }
-                
-                .story-list:not(.ordered) { 
-                    list-style-type: disc; 
+
+                .story-list:not(.ordered) {
+                    list-style-type: disc;
                 }
 
                 .story-li {
-                    margin: 6px 0;
-                    color: rgba(255,255,255,0.75);
-                    font: 400 17px/1.7 'Rajdhani', monospace;
+                    margin: clamp(4px, 1vw, 6px) 0;
+                    color: rgba(255, 255, 255, 0.75);
+                    font: 400 clamp(15px, 3vw, 17px)/1.7 'Rajdhani', monospace;
                 }
 
                 .story-li > ul,
                 .story-li > ol {
-                    margin-top: 8px;
-                    margin-bottom: 8px;
+                    margin-top: clamp(6px, 1.2vw, 8px);
+                    margin-bottom: clamp(6px, 1.2vw, 8px);
                 }
-                
+
                 .story-image {
-                    margin: 50px auto;
+                    margin: clamp(35px, 7vw, 50px) auto;
                     opacity: 0;
                     transform: translateY(30px);
                     transition: all 0.6s ease;
@@ -1268,13 +1456,13 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                 .image-wrapper {
                     position: relative;
                     overflow: hidden;
-                    background: #000000;
+                    background: #000;
                 }
 
                 .story-image img {
                     width: 100%;
                     height: auto;
-                    max-height: 400px;
+                    max-height: clamp(300px, 60vw, 400px);
                     object-fit: cover;
                     display: block;
                     transition: all 0.5s ease;
@@ -1292,8 +1480,8 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                 }
 
                 .story-image figcaption {
-                    padding: 12px 30px;
-                    font: 400 12px/1.4 'Rajdhani', monospace;
+                    padding: clamp(10px, 2vw, 12px) clamp(20px, 4vw, 30px);
+                    font: 400 clamp(10px, 2vw, 12px)/1.4 'Rajdhani', monospace;
                     color: rgba(255, 255, 255, 0.5);
                     letter-spacing: 0.06em;
                     text-transform: uppercase;
@@ -1301,8 +1489,8 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                 }
 
                 .story-quote {
-                    margin: 50px auto;
-                    padding: 32px;
+                    margin: clamp(35px, 7vw, 50px) auto;
+                    padding: clamp(24px, 5vw, 32px);
                     position: relative;
                     background: transparent;
                     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -1310,17 +1498,17 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
 
                 .quote-mark {
                     position: absolute;
-                    top: -10px;
-                    left: 20px;
-                    font-size: 48px;
+                    top: clamp(-8px, -1.5vw, -10px);
+                    left: clamp(15px, 3vw, 20px);
+                    font-size: clamp(36px, 7vw, 48px);
                     color: rgba(255, 255, 255, 0.1);
                     font-family: Georgia, serif;
-                    background: #000000;
-                    padding: 0 10px;
+                    background: #000;
+                    padding: 0 clamp(8px, 1.5vw, 10px);
                 }
 
                 .story-quote p {
-                    font: 500 20px/1.5 'Rajdhani', monospace;
+                    font: 500 clamp(16px, 3.5vw, 20px)/1.5 'Rajdhani', monospace;
                     font-style: italic;
                     color: rgba(255, 255, 255, 0.8);
                     margin: 0;
@@ -1328,7 +1516,7 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                 }
 
                 .insight-section {
-                    padding: 50px 60px;
+                    padding: clamp(35px, 7vw, 50px) clamp(30px, 6vw, 60px);
                     background: transparent;
                     border-top: 1px solid rgba(255, 255, 255, 0.05);
                     text-align: center;
@@ -1343,23 +1531,22 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     top: -1px;
                     left: 50%;
                     transform: translateX(-50%);
-                    width: 80px;
+                    width: clamp(60px, 12vw, 80px);
                     height: 1px;
                     background: rgba(255, 255, 255, 0.3);
                 }
 
                 .insight-text {
-                    font: 500 clamp(22px, 3vw, 28px)/1.5 'Rajdhani', monospace;
+                    font: 500 clamp(18px, 4vw, 28px)/1.5 'Rajdhani', monospace;
                     color: rgba(255, 255, 255, 0.9);
                     margin: 0 auto;
-                    max-width: 600px;
-                    position: relative;
+                    max-width: min(600px, 90%);
                 }
-                
+
                 #insight .section-header {
-                    padding: 0 0 16px 0;
+                    padding: 0 0 clamp(12px, 2.5vw, 16px) 0;
                     max-width: 900px;
-                    margin: 0 auto 50px;
+                    margin: 0 auto clamp(35px, 7vw, 50px);
                     position: relative;
                 }
 
@@ -1367,9 +1554,9 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     left: -10px;
                     right: -10px;
                 }
-                
+
                 .footer-section {
-                    padding: 40px 60px;
+                    padding: clamp(30px, 6vw, 40px) clamp(30px, 6vw, 60px);
                     border-top: 1px solid rgba(255, 255, 255, 0.05);
                     background: rgba(0, 0, 0, 0.5);
                 }
@@ -1377,15 +1564,15 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                 .footer-tags {
                     display: flex;
                     flex-wrap: wrap;
-                    gap: 12px;
+                    gap: clamp(10px, 2vw, 12px);
                     justify-content: center;
                 }
 
                 .tag {
-                    padding: 6px 12px;
+                    padding: clamp(5px, 1vw, 6px) clamp(10px, 2vw, 12px);
                     background: transparent;
                     border: 1px solid rgba(255, 255, 255, 0.1);
-                    font: 400 11px/1 'Rajdhani', monospace;
+                    font: 400 clamp(9px, 2vw, 11px)/1 'Rajdhani', monospace;
                     color: rgba(255, 255, 255, 0.5);
                     letter-spacing: 0.08em;
                     text-transform: lowercase;
@@ -1395,23 +1582,6 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                 .tag:hover {
                     color: rgba(255, 255, 255, 0.8);
                     border-color: rgba(255, 255, 255, 0.3);
-                }
-
-                .achievement-modal-container::-webkit-scrollbar {
-                    width: 6px;
-                }
-
-                .achievement-modal-container::-webkit-scrollbar-track {
-                    background: rgba(255, 255, 255, 0.02);
-                }
-
-                .achievement-modal-container::-webkit-scrollbar-thumb {
-                    background: rgba(255, 255, 255, 0.2);
-                    border-radius: 3px;
-                }
-
-                .achievement-modal-container::-webkit-scrollbar-thumb:hover {
-                    background: rgba(255, 255, 255, 0.3);
                 }
 
                 .story-section {
@@ -1425,41 +1595,66 @@ export default function AchievementModal({ data, isOpen, onClose }: Props) {
                     transform: translateY(0);
                 }
 
+                /* MOBILE BREAKPOINT - Stack stakes vertically */
                 @media (max-width: 768px) {
-                    .achievement-modal-container {
-                        width: min(95vw, 95vh);
-                        height: min(95vw, 95vh);
-                        max-width: none;
-                        max-height: none;
-                    }
                     .hero-section {
-                        aspect-ratio: 3 / 4; /* CHANGED: Taller ratio for mobile (portrait) */
+                        aspect-ratio: 3 / 4;
                     }
+
+                    .progress-system {
+                        grid-template-columns: 1fr;
+                        grid-template-rows: auto auto auto;
+                        padding: clamp(10px, 2vw, 12px);
+                        gap: clamp(10px, 2vw, 12px);
+                        height: auto;
+                    }
+
+                    .panel-left {
+                        order: 2;
+                        height: auto;
+                    }
+
                     .section-dots {
-                        gap: 20px;
-                        padding: 16px;
+                        order: 1;
+                        gap: clamp(12px, 3vw, 20px);
                     }
 
-                    .section-label {
-                        font-size: 9px;
-                    }
-
-                    .hero-content {
-                        padding: 40px 24px;
+                    .close-btn-panel {
+                        order: 3;
+                        justify-self: center;
                     }
 
                     .stakes-container {
                         grid-template-columns: 1fr;
-                        gap: 24px;
-                        padding: 0 24px;
+                        gap: clamp(20px, 4vw, 24px);
                     }
 
                     .stakes-divider {
                         transform: rotate(90deg);
                     }
+                    
+                    .section-label {
+                        font-size: clamp(7px, 1.5vw, 9px);
+                    }
+                }
 
-                    .section-header {
-                        padding: 0 24px 16px 24px;
+                /* VERY SMALL SCREENS - Further optimize */
+                @media (max-width: 480px) {
+                    .achievement-modal-backdrop {
+                        padding: 8px;
+                    }
+
+                    .achievement-modal-container {
+                        max-width: 100%;
+                        max-height: 100%;
+                    }
+
+                    .section-dots {
+                        gap: 10px;
+                    }
+
+                    .section-label {
+                        display: none; /* Hide labels on very small screens */
                     }
                 }
 
