@@ -1,5 +1,6 @@
 import {ProgressLine} from '@/components/00_ProgressLine';
 import LoadingWrapper from '@/components/00_LoadingAnimation';
+import ContactFooter from '@/components/09_ContactFooter';
 import './globals.css';
 import type {Metadata} from 'next';
 import {Rajdhani} from 'next/font/google';
@@ -26,8 +27,11 @@ export default function RootLayout({children}: { children: React.ReactNode }) {
 
             {children}
 
-            <footer className="container py-12 text-sm opacity-60 border-t border-white/10">
-                © {new Date().getFullYear()} Filip Ondrej
+            {/*<footer className="container py-12 text-sm opacity-60 border-t border-white/10">*/}
+            {/*    © {new Date().getFullYear()} Filip Ondrej*/}
+            {/*</footer>*/}
+            <footer>
+                <ContactFooter />
             </footer>
         </LoadingWrapper>
         </body>

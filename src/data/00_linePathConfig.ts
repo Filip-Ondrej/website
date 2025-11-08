@@ -331,8 +331,93 @@ export const linePathConfig: PathSegment[] = [
     // 5. Go down on LEFT side
     {
         from: 'prt-bottom-left',
-        to: 'tcfyvjkybiun',
+        to: 'recognition-start-left-top',
         type: 'vertical',
         sectionNumber: 9,
+    },
+    // ============================================
+    // SECTION 4: TIMELINE TITLE
+    // This creates the horizontal crossings
+    // ============================================
+    //tt-start-right-top → tt-middle-right → tt-middle-left → tt-under-left → tt-bottom-left
+    // 1. Enter and go down on LEFT side
+    {
+        from: 'recognition-start-left-top',
+        to: 'recognition-bottom-left',
+        type: 'vertical',
+        sectionNumber: 10,
+    },
+
+    // 2. CROSS HORIZONTALLY from LEFT to RIGHT (SLOW SCROLL)
+    {
+        from: 'recognition-bottom-left',
+        to: 'recognition-bottom-right',
+        type: 'horizontal',
+        sectionNumber: 10,
+        scrollMultiplier: 10, // 10x slower = 10% speed
+    },
+
+    // 3. Go down on RIGHT side
+    {
+        from: 'recognition-bottom-right',
+        to: 'recognition-under-right',
+        type: 'vertical',
+        sectionNumber: 10,
+    },
+
+    // 4. CROSS HORIZONTALLY from RIGHT to LEFT (SLOW SCROLL)
+
+    // 5. Go down on LEFT side
+    {
+        from: 'recognition-under-right',
+        to: 'cft-start-right-top',
+        type: 'vertical',
+        sectionNumber: 10,
+    },
+
+    // ============================================
+    // SECTION 4: TIMELINE TITLE
+    // This creates the horizontal crossings
+    // ============================================
+    //tt-start-right-top → tt-middle-right → tt-middle-left → tt-under-left → tt-bottom-left
+    // 1. Enter and go down on LEFT side
+    {
+        from: 'cft-start-right-top',
+        to: 'cft-middle-right',
+        type: 'vertical',
+        sectionNumber: 11,
+    },
+
+    // 2. CROSS HORIZONTALLY from LEFT to RIGHT (SLOW SCROLL)
+    {
+        from: 'cft-middle-right',
+        to: 'cft-middle-left',
+        type: 'horizontal',
+        sectionNumber: 11,
+        scrollMultiplier: 10, // 10x slower = 10% speed
+    },
+
+    // 3. Go down on RIGHT side
+    {
+        from: 'cft-middle-left',
+        to: 'cft-under-left',
+        type: 'vertical',
+        sectionNumber: 11,
+    },
+
+    // 4. CROSS HORIZONTALLY from RIGHT to LEFT (SLOW SCROLL)
+    {
+        from: 'cft-under-left',
+        to: 'cft-bottom-left',
+        type: 'vertical',
+        sectionNumber: 11,
+    },
+
+    // 5. Go down on LEFT side
+    {
+        from: 'cft-bottom-left',
+        to: 'wkekufwiufep',
+        type: 'vertical',
+        sectionNumber: 11,
     },
 ];

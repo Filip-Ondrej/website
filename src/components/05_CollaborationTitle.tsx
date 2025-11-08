@@ -10,7 +10,7 @@ export type CollaborationTitleProps = {
     className?: string;
     scale?: number;               // font size multiplier
     rightOffsetPx?: number;       // horizontal offset of the title FROM THE RIGHT EDGE
-    underOffsetPx?: number;       // px below middle for the “under” point
+    underOffsetPx?: number;       // px below middle for the "under" point
     reserveBelowPx?: number;      // spacing below the title block
     showAnchors?: boolean;
     debugGuides?: boolean;
@@ -92,44 +92,40 @@ const styles = `
 .ct-guide--mid    { top: 50%; }
 .ct-guide--under  { top: var(--ct-under); }
 
-/* ---------------------- TUNNEL ELLIPSE ---------------------- */
-/* smashed-circle around the bottom-right vertical anchor */
-.ct-tunnel {
-  --ct-tunnel-offset-y: 2px;      /* small downward nudge */
-
+/* ---------------------- TUNNEL ELLIPSE (SVG) ---------------------- */
+.ct-tunnel-svg {
   position: absolute;
-  bottom: 12px;                    /* same as ct-bottom-right anchor */
-  right: 100px;                    /* matches offsetX={100} */
-  width: 90px;                     /* wide + short -> ellipse vibe */
-  height: 30px;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.18);
-  transform: translateX(50%) translateY(var(--ct-tunnel-offset-y)) scale(0);
-  transform-origin: center center;
+  bottom: 12px;
+  right: 100px;
+  width: clamp(80px, 11vw, 100px);
+  height: clamp(16px, 2.5vw, 20px);
+  transform: translateX(50%) translateY(3px);
   pointer-events: none;
-  transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
-  will-change: transform;
+  overflow: visible;
 }
 
 @media (max-width: 1024px) {
-  .ct-tunnel {
+  .ct-tunnel-svg {
     right: 60px;
-    width: 80px;
-    height: 28px;
   }
 }
 
 @media (max-width: 640px) {
-  .ct-tunnel {
+  .ct-tunnel-svg {
     right: 40px;
-    width: 72px;
-    height: 26px;
   }
 }
 
+.ct-tunnel-ellipse {
+  transform-origin: center;
+  transform: scale(0);
+  transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+
 /* grow / shrink depending on line progress */
-.ct-wrap--tunnel-ready .ct-tunnel {
-  transform: translateX(50%) translateY(var(--ct-tunnel-offset-y)) scale(1);
+.ct-wrap--tunnel-ready .ct-tunnel-ellipse {
+  transform: scale(1);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -138,7 +134,7 @@ const styles = `
     opacity: 1 !important;
     transform: none !important;
   }
-  .ct-tunnel {
+  .ct-tunnel-ellipse {
     transition: none !important;
   }
 }
@@ -284,8 +280,100 @@ export default function CollaborationTitle({
                             <LineAnchor id="ct-bottom-right" position="right" offsetX={100} />
                         </div>
 
-                        {/* Tunnel ellipse around bottom anchor */}
-                        <div className="ct-tunnel" />
+                        {/* SVG Tunnel ellipse around bottom anchor - layered rings with strokes */}
+                        <svg
+                            className="ct-tunnel-svg"
+                            viewBox="0 0 100 20"
+                            preserveAspectRatio="xMidYMid meet"
+                            xmlns="http://www.w3.org/2000/svg"
+                        >
+                            <defs>
+                                {/* Main tunnel boundary - clips everything to the base ellipse */}
+                                <clipPath id="tunnel-boundary">
+                                    <ellipse cx="50" cy="10" rx="50" ry="10" />
+                                </clipPath>
+                            </defs>
+
+                            {/* Group all rings inside the main tunnel boundary */}
+                            <g clipPath="url(#tunnel-boundary)">
+                                {/* Fill the base to create solid background */}
+                                <ellipse
+                                    className="ct-tunnel-ellipse"
+                                    cx="50"
+                                    cy="10"
+                                    rx="50"
+                                    ry="10"
+                                    fill="rgba(255,255,255,0.05)"
+                                />
+
+                                {/* Ring outlines - each is a stroke showing the "step" */}
+                                <ellipse
+                                    className="ct-tunnel-ellipse"
+                                    cx="50"
+                                    cy="10"
+                                    rx="50"
+                                    ry="10"
+                                    fill="none"
+                                    stroke="rgba(255,255,255,0.24)"
+                                    strokeWidth="2.5"
+                                />
+
+                                <ellipse
+                                    className="ct-tunnel-ellipse"
+                                    cx="50"
+                                    cy="11.5"
+                                    rx="50"
+                                    ry="10"
+                                    fill="none"
+                                    stroke="rgba(255,255,255,0.20)"
+                                    strokeWidth="1"
+                                />
+
+                                <ellipse
+                                    className="ct-tunnel-ellipse"
+                                    cx="50"
+                                    cy="13"
+                                    rx="50"
+                                    ry="10"
+                                    fill="none"
+                                    stroke="rgba(255,255,255,0.16)"
+                                    strokeWidth="1"
+                                />
+
+                                <ellipse
+                                    className="ct-tunnel-ellipse"
+                                    cx="50"
+                                    cy="14.5"
+                                    rx="50"
+                                    ry="10"
+                                    fill="none"
+                                    stroke="rgba(255,255,255,0.12)"
+                                    strokeWidth="1"
+                                />
+
+                                <ellipse
+                                    className="ct-tunnel-ellipse"
+                                    cx="50"
+                                    cy="16"
+                                    rx="50"
+                                    ry="10"
+                                    fill="none"
+                                    stroke="rgba(255,255,255,0.08)"
+                                    strokeWidth="1"
+                                />
+
+                                <ellipse
+                                    className="ct-tunnel-ellipse"
+                                    cx="50"
+                                    cy="17.5"
+                                    rx="50"
+                                    ry="10"
+                                    fill="none"
+                                    stroke="rgba(255,255,255,0.05)"
+                                    strokeWidth="0.8"
+                                />
+                            </g>
+                        </svg>
                     </div>
                 )}
 

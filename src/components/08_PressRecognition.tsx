@@ -1,14 +1,15 @@
 'use client';
 
 import React from 'react';
+import { LineAnchor } from '@/components/00_LineAnchor';
 
 type VideoItem = {
     id: string;
     title: string;
     source: string;
     date: string;
-    url: string;        // keep your YouTube (if you need it elsewhere)
-    vimeoUrl?: string;  // NEW: vimeo link for this card
+    url: string;
+    vimeoUrl?: string;
     year?: number;
 };
 
@@ -62,7 +63,7 @@ const VIDEOS: VideoItem[] = [
     },
 ];
 
-const getVimeoId = (url: string | undefined) => {
+const getVimeoId = (url?: string) => {
     if (!url) return '';
     const match = url.match(/vimeo\.com\/(\d+)/);
     return match ? match[1] : '';
@@ -81,18 +82,19 @@ export default function Recognition() {
         return () => window.removeEventListener('resize', onR);
     }, []);
 
-    const INSET = vw <= 640 ? 40 : vw <= 1024 ? 60 : 100;
+    // Responsive insets using fluid calculation
+    const INSET = Math.max(20, Math.min(vw * 0.08, 100));
 
-    const NAV_SIZE = 32;
-    const HEADER_PAD = 12;
+    const NAV_SIZE = vw <= 640 ? 28 : 32;
+    const HEADER_PAD = vw <= 640 ? 8 : 12;
 
     // cage constants
     const TOP_Y = NAV_SIZE + HEADER_PAD * 2;
-    const EXTRA_BOTTOM_SPACE = 200;
+    const EXTRA_BOTTOM_SPACE = vw <= 640 ? 100 : 200;
     const MID_RATIO = 0.5;
     const CAP_OFFSET = TOP_Y;
 
-    // approximate aspect
+    // aspect guess
     const ASPECT_W = 16;
     const ASPECT_H = 11;
 
@@ -107,7 +109,7 @@ export default function Recognition() {
     /* ---------------------------------
        card size + dynamic frame height
     --------------------------------- */
-    const CARD_SCALE = 0.92;
+    const CARD_SCALE = vw <= 640 ? 0.96 : 0.92;
     const cardOuterW = frameWidth * CARD_SCALE;
     const sideGap = (frameWidth - cardOuterW) / 2;
     const cardOffsetX = sideGap;
@@ -119,10 +121,10 @@ export default function Recognition() {
     const frameHeight = cardHeight + sideGap * 2;
     const verticalPadding = sideGap;
 
-    // y coords
+    // y coords (bottom of cage is key for line anchors)
     const yTop = TOP_Y;
     const yBottom = yTop + frameHeight;
-    const yCap = yTop - CAP_OFFSET; // = 0
+    const yCap = yTop - CAP_OFFSET; // 0
 
     const svgHeight = yBottom + EXTRA_BOTTOM_SPACE;
 
@@ -131,12 +133,15 @@ export default function Recognition() {
     --------------------------------- */
     const total = VIDEOS.length;
     const [currentSlide, setCurrentSlide] = React.useState(0);
+    const [prevSlide, setPrevSlide] = React.useState(0);
 
     const prev = () => {
+        setPrevSlide(currentSlide);
         setCurrentSlide((i) => (i === 0 ? total - 1 : i - 1));
     };
 
     const next = () => {
+        setPrevSlide(currentSlide);
         setCurrentSlide((i) => (i === total - 1 ? 0 : i + 1));
     };
 
@@ -157,7 +162,7 @@ export default function Recognition() {
     const trackW = frameWidth * total;
     const trackTranslateX = currentSlide * frameWidth;
 
-    // card measurement ref
+    // card measurement ref (for dynamic height)
     const mainCardRef = React.useRef<HTMLElement | null>(null);
 
     React.useLayoutEffect(() => {
@@ -166,23 +171,21 @@ export default function Recognition() {
         const rect = el.getBoundingClientRect();
         const h = rect.height;
         setMeasuredCardH((prev) =>
-            prev === null || Math.abs(prev - h) > 2 ? h : prev
+            prev === null || Math.abs(prev - h) > 2 ? h : prev,
         );
     }, [currentSlide, vw]);
 
     /* ---------------------------------
-       video hover + fullscreen state
+       video hover + fullscreen
     --------------------------------- */
     const [hoveredVideoId, setHoveredVideoId] = React.useState<string | null>(
         null,
     );
     const [isFullscreen, setIsFullscreen] = React.useState(false);
-    const [fullscreenVimeoId, setFullscreenVimeoId] = React.useState<string | null>(
-        null,
-    );
+    const [fullscreenVimeoId, setFullscreenVimeoId] =
+        React.useState<string | null>(null);
     const fullscreenIframeRef = React.useRef<HTMLIFrameElement | null>(null);
 
-    // fullscreen body lock + Vimeo "ended" listener
     React.useEffect(() => {
         const setupVimeoListener = () => {
             if (fullscreenIframeRef.current && window.Vimeo) {
@@ -194,7 +197,6 @@ export default function Recognition() {
         };
 
         if (isFullscreen && fullscreenVimeoId) {
-            // lock scroll
             const scrollY = window.scrollY;
             document.body.style.position = 'fixed';
             document.body.style.top = `-${scrollY}px`;
@@ -202,7 +204,6 @@ export default function Recognition() {
             document.body.style.right = '0';
             document.body.style.overflow = 'hidden';
 
-            // load Vimeo API if needed
             if (!window.Vimeo) {
                 const script = document.createElement('script');
                 script.src = 'https://player.vimeo.com/api/player.js';
@@ -212,7 +213,6 @@ export default function Recognition() {
                 setupVimeoListener();
             }
         } else {
-            // restore scroll position
             const top = document.body.style.top;
             document.body.style.position = '';
             document.body.style.top = '';
@@ -245,6 +245,52 @@ export default function Recognition() {
     return (
         <>
             <section className="recog-wrap">
+                {/* LINE ANCHORS OVERLAY */}
+                <div className="pointer-events-none absolute inset-0 z-[25]">
+                    {/* small top-left anchor */}
+                    <div className="absolute left-0 top-[12px]">
+                        <LineAnchor
+                            id="recognition-start-left-top"
+                            position="left"
+                            offsetX={100}
+                        />
+                    </div>
+
+                    {/* anchors exactly on bottom card line */}
+                    <div
+                        className="absolute left-0 w-0"
+                        style={{ top: yBottom }}
+                    >
+                        <LineAnchor
+                            id="recognition-bottom-left"
+                            position="left"
+                            offsetX={100}
+                        />
+                    </div>
+                    <div
+                        className="absolute right-0 w-0"
+                        style={{ top: yBottom }}
+                    >
+                        <LineAnchor
+                            id="recognition-bottom-right"
+                            position="right"
+                            offsetX={100}
+                        />
+                    </div>
+
+                    {/* extra point 100px below bottom line on the right */}
+                    <div
+                        className="absolute right-0 w-0"
+                        style={{ top: yBottom + 100 }}
+                    >
+                        <LineAnchor
+                            id="recognition-under-right"
+                            position="right"
+                            offsetX={100}
+                        />
+                    </div>
+                </div>
+
                 {/* ===================== STATIC GRID LINES ===================== */}
                 <svg
                     className="gridSvg"
@@ -393,9 +439,6 @@ export default function Recognition() {
                     >
                         {VIDEOS.map((vid, rawIndex) => {
                             const frameLeft = rawIndex * frameWidth;
-                            const isClickable =
-                                rawIndex === currentSlide ||
-                                rawIndex === (currentSlide + 1) % total;
                             const indexLabel = String(rawIndex + 1).padStart(2, '0');
                             const isMain = rawIndex === currentSlide;
 
@@ -403,10 +446,25 @@ export default function Recognition() {
                                 getVimeoId(vid.vimeoUrl) ||
                                 getVimeoId(DEFAULT_VIMEO_URL);
 
+                            // only current + next are fully visible → clickable
+                            const isClickable =
+                                rawIndex === currentSlide ||
+                                rawIndex === (currentSlide + 1) % total;
+
+                            const handleClick = () => {
+                                if (!isClickable || !vimeoId) return;
+                                setFullscreenVimeoId(vimeoId);
+                                setIsFullscreen(true);
+                            };
+
                             return (
                                 <article
                                     key={vid.id + '-' + rawIndex}
-                                    ref={isMain ? (mainCardRef as React.RefObject<HTMLElement>) : undefined}
+                                    ref={
+                                        isMain
+                                            ? (mainCardRef as React.RefObject<HTMLElement>)
+                                            : undefined
+                                    }
                                     className={`videoCard ${
                                         isClickable ? 'clickable' : 'teaser'
                                     }`}
@@ -415,16 +473,23 @@ export default function Recognition() {
                                         top: verticalPadding,
                                         width: cardOuterW,
                                     }}
-                                    onMouseEnter={() => setHoveredVideoId(vid.id)}
-                                    onMouseLeave={() =>
-                                        setHoveredVideoId((prev) =>
-                                            prev === vid.id ? null : prev,
-                                        )
-                                    }
-                                    onClick={() => {
-                                        if (!vimeoId) return;
-                                        setFullscreenVimeoId(vimeoId);
-                                        setIsFullscreen(true);
+                                    onMouseEnter={() => {
+                                        if (isClickable) setHoveredVideoId(vid.id);
+                                    }}
+                                    onMouseLeave={() => {
+                                        if (hoveredVideoId === vid.id) {
+                                            setHoveredVideoId(null);
+                                        }
+                                    }}
+                                    onClick={handleClick}
+                                    role={isClickable ? 'button' : undefined}
+                                    tabIndex={isClickable ? 0 : -1}
+                                    onKeyDown={(e) => {
+                                        if (!isClickable) return;
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                            e.preventDefault();
+                                            handleClick();
+                                        }
                                     }}
                                 >
                                     {/* caption bar */}
@@ -447,7 +512,7 @@ export default function Recognition() {
                                         <h3 className="cardTitle">{vid.title}</h3>
                                     </div>
 
-                                    {/* VIDEO VISUAL – looping background Vimeo */}
+                                    {/* VIDEO VISUAL – looping Vimeo */}
                                     <div className="videoVisual">
                                         {vimeoId && (
                                             <iframe
@@ -462,13 +527,15 @@ export default function Recognition() {
                                                     border: 'none',
                                                     display: 'block',
                                                     pointerEvents: 'none',
+                                                    background: '#000',
                                                 }}
                                             />
                                         )}
 
-                                        {/* Play overlay */}
+                                        {/* Play overlay only on clickable cards */}
                                         <div
                                             className={
+                                                isClickable &&
                                                 hoveredVideoId === vid.id
                                                     ? 'playOverlay visible'
                                                     : 'playOverlay'
@@ -519,6 +586,7 @@ export default function Recognition() {
                     </div>
                 </div>
 
+                {/* spacer */}
                 <div style={{ height: svgHeight }} />
 
                 <style jsx>{`
@@ -535,7 +603,7 @@ export default function Recognition() {
                         position: relative;
                         background: transparent;
                         color: #fff;
-                        padding-bottom: 80px;
+                        padding-bottom: clamp(40px, 8vw, 80px);
                         overflow-x: hidden;
                         font-family: 'Rajdhani', monospace;
                         margin: 0;
@@ -569,18 +637,19 @@ export default function Recognition() {
                         display: flex;
                         align-items: center;
                         justify-content: space-between;
-                        gap: 16px;
+                        gap: clamp(8px, 2vw, 16px);
                         pointer-events: auto;
                     }
 
                     .counterBlock {
                         display: flex;
                         align-items: center;
+                        margin-left: 6px;
                     }
                     .counterText {
                         font-family: 'Rajdhani', monospace;
                         font-weight: 600;
-                        font-size: clamp(16px, 1.4vw, 20px);
+                        font-size: clamp(12px, 2vw, 20px);
                         line-height: 1;
                         letter-spacing: 0.16em;
                         text-transform: uppercase;
@@ -591,7 +660,7 @@ export default function Recognition() {
                     .navBlock {
                         display: flex;
                         align-items: center;
-                        gap: 8px;
+                        gap: clamp(4px, 1vw, 8px);
                     }
                     .navBtn {
                         appearance: none;
@@ -606,7 +675,7 @@ export default function Recognition() {
                         justify-content: center;
                         cursor: pointer;
                         position: relative;
-                        box-shadow: 0 16px 32px rgba(0, 0, 0, 0.75);
+                        box-shadow: 0 clamp(8px, 2vw, 16px) clamp(16px, 4vw, 32px) rgba(0, 0, 0, 0.75);
                         transition:
                             border-color 0.3s cubic-bezier(0.16, 1, 0.3, 1),
                             box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1),
@@ -620,31 +689,24 @@ export default function Recognition() {
                         place-items: center;
                         transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
                     }
-                    .navBtn:hover {
-                        border-color: rgba(255, 255, 255, 0.8);
-                        color: rgba(255, 255, 255, 1);
-                        box-shadow:
-                            0 0 12px rgba(255, 255, 255, 0.4),
-                            0 30px 60px rgba(0, 0, 0, 0.9);
-                        transform: translateY(-2px) scale(1.03);
+                    
+                    @media (hover: hover) {
+                        .navBtn:hover {
+                            border-color: rgba(255, 255, 255, 0.8);
+                            color: rgba(255, 255, 255, 1);
+                            box-shadow:
+                                0 0 12px rgba(255, 255, 255, 0.4),
+                                0 clamp(15px, 4vw, 30px) clamp(30px, 8vw, 60px) rgba(0, 0, 0, 0.9);
+                            transform: translateY(-2px) scale(1.03);
+                        }
+                        .navBtn:hover .navBtnInner {
+                            transform: scale(1.07);
+                        }
                     }
-                    .navBtn:hover .navBtnInner {
-                        transform: scale(1.07);
-                    }
+                    
                     .navBtn:active {
                         transform: scale(0.94);
                         transition-duration: 0.1s;
-                    }
-
-                    @media (max-width: 640px) {
-                        .navBtn {
-                            width: 28px;
-                            height: 28px;
-                        }
-                        .counterText {
-                            font-size: 14px;
-                            letter-spacing: 0.14em;
-                        }
                     }
 
                     .carouselViewport {
@@ -659,7 +721,7 @@ export default function Recognition() {
                         left: 0;
                         top: 0;
                         display: block;
-                        transition: transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+                        transition: transform 1.4s cubic-bezier(0.16, 1, 0.3, 1);
                         will-change: transform;
                         pointer-events: auto;
                     }
@@ -669,8 +731,8 @@ export default function Recognition() {
                         display: flex;
                         flex-direction: column;
                         border: 1px solid rgba(255, 255, 255, 0.12);
-                        background: rgba(0, 0, 0, 0.9);
-                        box-shadow: 0 32px 88px rgba(0, 0, 0, 0.7);
+                        background: #131315;
+                        box-shadow: 0 clamp(16px, 4vw, 32px) clamp(44px, 10vw, 88px) rgba(0, 0, 0, 0.7);
                         overflow: hidden;
                         transform-origin: center;
                         z-index: 30;
@@ -679,60 +741,60 @@ export default function Recognition() {
                             box-shadow 140ms ease,
                             border-color 120ms ease,
                             background 120ms ease;
-                        cursor: pointer;
-                    }
-
-                    .videoCard.teaser {
                         cursor: default;
                     }
 
-                    .videoCard:hover {
-                        transform: scale(1.04);
-                        box-shadow:
-                            0 32px 88px rgba(0, 0, 0, 0.7),
-                            0 0 36px rgba(255, 255, 255, 0.12);
-                        border-color: rgba(255, 255, 255, 0.28);
-                        background: rgba(0, 0, 0, 0.95);
+                    .videoCard.clickable {
+                        cursor: pointer;
+                    }
+
+                    @media (hover: hover) {
+                        .videoCard:hover {
+                            transform: scale(1.04);
+                            box-shadow: 0 clamp(16px, 4vw, 32px) clamp(44px, 10vw, 88px) rgba(0, 0, 0, 0.7);
+                            border-color: rgba(255, 255, 255, 0.28);
+                            background: #171719;
+                        }
                     }
 
                     .cardCaption,
                     .cardTitleRow,
                     .cardFooter {
-                        background: #080808;
+                        background: #131315;
                     }
 
                     .cardCaption {
                         position: relative;
                         display: flex;
                         align-items: center;
-                        gap: 10px;
-                        padding: 10px 14px;
+                        gap: clamp(6px, 1.5vw, 10px);
+                        padding: clamp(8px, 2vw, 10px) clamp(10px, 2.5vw, 14px);
                         border-bottom: 1px solid rgba(255, 255, 255, 0.08);
                     }
 
                     .capIndex,
                     .capYear {
-                        font: 600 11px/1 'Rajdhani', monospace;
+                        font: 600 clamp(9px, 1.5vw, 11px)/1 'Rajdhani', monospace;
                         letter-spacing: 0.16em;
                         color: rgba(255, 255, 255, 0.56);
                         text-transform: uppercase;
                     }
                     .capDot {
-                        width: 3px;
-                        height: 3px;
+                        width: clamp(2px, 0.5vw, 3px);
+                        height: clamp(2px, 0.5vw, 3px);
                         border-radius: 999px;
                         background: rgba(255, 255, 255, 0.25);
                     }
 
                     .cardTitleRow {
-                        padding: 10px 14px 8px 14px;
+                        padding: clamp(8px, 2vw, 10px) clamp(10px, 2.5vw, 14px) clamp(6px, 1.5vw, 8px) clamp(10px, 2.5vw, 14px);
                         border-bottom: 1px solid rgba(255, 255, 255, 0.08);
                     }
 
                     .cardTitle {
                         font-family: 'Rajdhani', monospace;
                         font-weight: 800;
-                        font-size: clamp(17px, 2.4vw, 22px);
+                        font-size: clamp(15px, 2.8vw, 22px);
                         line-height: 1.15;
                         color: #fff;
                         margin: 0;
@@ -742,13 +804,10 @@ export default function Recognition() {
                     .videoVisual {
                         position: relative;
                         width: 100%;
-                        aspect-ratio: 16 / 9;
+                        padding-bottom: 56.25%; /* 16:9 aspect ratio */
                         background: #000;
                         border-top: 1px solid rgba(255, 255, 255, 0.08);
                         border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
                         overflow: hidden;
                     }
 
@@ -766,9 +825,15 @@ export default function Recognition() {
                     .playOverlay.visible {
                         opacity: 1;
                     }
+
+                    /* teaser cards never show play overlay */
+                    .videoCard.teaser .playOverlay {
+                        opacity: 0 !important;
+                    }
+
                     .playIcon {
-                        width: 180px;
-                        height: 180px;
+                        width: clamp(80px, 20vw, 180px);
+                        height: clamp(80px, 20vw, 180px);
                         filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
                         transform: scale(1);
                         transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
@@ -778,15 +843,15 @@ export default function Recognition() {
                         display: flex;
                         align-items: center;
                         justify-content: flex-start;
-                        padding: 12px 14px 14px;
+                        padding: clamp(10px, 2vw, 12px) clamp(10px, 2.5vw, 14px) clamp(12px, 2.5vw, 14px);
                         border-top: 1px solid rgba(255, 255, 255, 0.08);
-                        gap: 16px;
+                        gap: clamp(8px, 2vw, 16px);
                         flex-wrap: wrap;
                     }
 
                     .videoSourceTag {
-                        padding: 5px 10px;
-                        font-size: 11px;
+                        padding: clamp(4px, 1vw, 5px) clamp(8px, 1.5vw, 10px);
+                        font-size: clamp(9px, 1.5vw, 11px);
                         font-weight: 600;
                         line-height: 1;
                         letter-spacing: 0.16em;
@@ -798,9 +863,11 @@ export default function Recognition() {
                         transition: all 0.3s ease;
                     }
 
-                    .videoSourceTag:hover {
-                        color: rgba(255, 255, 255, 0.8);
-                        border-color: rgba(255, 255, 255, 0.3);
+                    @media (hover: hover) {
+                        .videoSourceTag:hover {
+                            color: rgba(255, 255, 255, 0.8);
+                            border-color: rgba(255, 255, 255, 0.3);
+                        }
                     }
                 `}</style>
             </section>
@@ -838,8 +905,7 @@ export default function Recognition() {
 
                     <div
                         style={{
-                            width: '90vw',
-                            maxWidth: '1600px',
+                            width: 'clamp(280px, 90vw, 1600px)',
                             aspectRatio: '16 / 9',
                         }}
                     >
@@ -853,6 +919,7 @@ export default function Recognition() {
                                 width: '100%',
                                 height: '100%',
                                 border: 'none',
+                                background: '#000',
                             }}
                         />
                     </div>
@@ -860,10 +927,10 @@ export default function Recognition() {
                     <style jsx>{`
                         .recogCloseBtn {
                             position: fixed;
-                            top: 32px;
-                            right: 32px;
-                            width: 48px;
-                            height: 48px;
+                            top: clamp(16px, 4vw, 32px);
+                            right: clamp(16px, 4vw, 32px);
+                            width: clamp(40px, 6vw, 48px);
+                            height: clamp(40px, 6vw, 48px);
                             background: transparent;
                             border: 1px solid rgba(255, 255, 255, 0.2);
                             cursor: pointer;
@@ -873,8 +940,8 @@ export default function Recognition() {
 
                         .recogCloseIcon {
                             position: relative;
-                            width: 20px;
-                            height: 20px;
+                            width: clamp(16px, 3vw, 20px);
+                            height: clamp(16px, 3vw, 20px);
                             margin: auto;
                         }
 
@@ -897,21 +964,14 @@ export default function Recognition() {
                             transform: translateY(-50%) rotate(-45deg);
                         }
 
-                        .recogCloseBtn:hover {
-                            border-color: rgba(255, 255, 255, 0.8);
-                            transform: rotate(90deg);
-                        }
+                        @media (hover: hover) {
+                            .recogCloseBtn:hover {
+                                border-color: rgba(255, 255, 255, 0.8);
+                                transform: rotate(90deg);
+                            }
 
-                        .recogCloseBtn:hover .recogCloseLine {
-                            background: #ffffff;
-                        }
-
-                        @media (max-width: 768px) {
-                            .recogCloseBtn {
-                                top: 16px;
-                                right: 16px;
-                                width: 40px;
-                                height: 40px;
+                            .recogCloseBtn:hover .recogCloseLine {
+                                background: #ffffff;
                             }
                         }
                     `}</style>
@@ -921,7 +981,7 @@ export default function Recognition() {
     );
 }
 
-/* TypeScript declaration for Vimeo Player API */
+/* Vimeo typings */
 declare global {
     interface Window {
         Vimeo?: {

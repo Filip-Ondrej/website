@@ -10,7 +10,7 @@ export type PressRecognitionTitleProps = {
     className?: string;
     scale?: number;               // font size multiplier
     leftOffsetPx?: number;        // horizontal offset of the title FROM THE LEFT EDGE
-    underOffsetPx?: number;       // px below middle for the “under” point
+    underOffsetPx?: number;       // px below middle for the "under" point
     reserveBelowPx?: number;      // spacing below the title block
     showAnchors?: boolean;
     debugGuides?: boolean;
@@ -101,54 +101,40 @@ const styles = `
 .prt-guide--mid    { top: 50%; }
 .prt-guide--under  { top: var(--prt-under); }
 
-/* ---------------------- TUNNEL ELLIPSE (TOP) ---------------------- */
-.prt-tunnel {
-  --prt-tunnel-offset-y: 12px;  /* tiny nudge if you need it */
-
+/* ---------------------- TUNNEL ELLIPSE (SVG) - TOP ENTRY ---------------------- */
+.prt-tunnel-svg {
   position: absolute;
-  /* anchor is at right:0 top:42px with offsetX={100}.
-     So we put tunnel at top:42px, right:100px and then
-     translateY(-50%) to center it vertically on that line point. */
   top: 42px;
   right: 100px;
-
-  width: 90px;                 /* squash these to taste */
-  height: 30px;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.18);
-
-  transform:
-    translateX(50%)
-    translateY(calc(-50% + var(--prt-tunnel-offset-y)))
-    scale(0);
-  transform-origin: center center;
+  width: clamp(80px, 11vw, 100px);
+  height: clamp(16px, 2.5vw, 20px);
+  transform: translateX(50%) translateY(calc(-50% + 6px));
   pointer-events: none;
+  overflow: visible;
+}
+
+@media (max-width: 1024px) {
+  .prt-tunnel-svg {
+    right: 60px;
+  }
+}
+
+@media (max-width: 640px) {
+  .prt-tunnel-svg {
+    right: 40px;
+  }
+}
+
+.prt-tunnel-ellipse {
+  transform-origin: center;
+  transform: scale(0);
   transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
   will-change: transform;
 }
 
 /* open state */
-.prt-wrap--tunnel-ready .prt-tunnel {
-  transform:
-    translateX(50%)
-    translateY(calc(-50% + var(--prt-tunnel-offset-y)))
-    scale(1);
-}
-
-@media (max-width: 1024px) {
-  .prt-tunnel {
-    right: 60px;
-    width: 80px;
-    height: 28px;
-  }
-}
-
-@media (max-width: 640px) {
-  .prt-tunnel {
-    right: 40px;
-    width: 72px;
-    height: 26px;
-  }
+.prt-wrap--tunnel-ready .prt-tunnel-ellipse {
+  transform: scale(1);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -157,7 +143,7 @@ const styles = `
     opacity: 1 !important;
     transform: none !important;
   }
-  .prt-tunnel {
+  .prt-tunnel-ellipse {
     transition: none !important;
   }
 }
@@ -290,8 +276,100 @@ export default function PressRecognitionTitle({
                             <LineAnchor id="prt-bottom-left" position="left" offsetX={100} />
                         </div>
 
-                        {/* Tunnel ellipse at the top anchor */}
-                        <div className="prt-tunnel" />
+                        {/* SVG Tunnel ellipse at top anchor - entry point (built upward) */}
+                        <svg
+                            className="prt-tunnel-svg"
+                            viewBox="0 0 100 20"
+                            preserveAspectRatio="xMidYMid meet"
+                            xmlns="http://www.w3.org/2000/svg"
+                        >
+                            <defs>
+                                {/* Main tunnel boundary - clips everything to the base ellipse */}
+                                <clipPath id="tunnel-boundary-top">
+                                    <ellipse cx="50" cy="10" rx="50" ry="10" />
+                                </clipPath>
+                            </defs>
+
+                            {/* Group all rings inside the main tunnel boundary */}
+                            <g clipPath="url(#tunnel-boundary-top)">
+                                {/* Fill the base to create solid background */}
+                                <ellipse
+                                    className="prt-tunnel-ellipse"
+                                    cx="50"
+                                    cy="10"
+                                    rx="50"
+                                    ry="10"
+                                    fill="rgba(255,255,255,0.05)"
+                                />
+
+                                {/* Ring outlines - shifted UPWARD (negative direction) */}
+                                <ellipse
+                                    className="prt-tunnel-ellipse"
+                                    cx="50"
+                                    cy="10"
+                                    rx="50"
+                                    ry="10"
+                                    fill="none"
+                                    stroke="rgba(255,255,255,0.24)"
+                                    strokeWidth="2.5"
+                                />
+
+                                <ellipse
+                                    className="prt-tunnel-ellipse"
+                                    cx="50"
+                                    cy="8.5"
+                                    rx="50"
+                                    ry="10"
+                                    fill="none"
+                                    stroke="rgba(255,255,255,0.20)"
+                                    strokeWidth="1"
+                                />
+
+                                <ellipse
+                                    className="prt-tunnel-ellipse"
+                                    cx="50"
+                                    cy="7"
+                                    rx="50"
+                                    ry="10"
+                                    fill="none"
+                                    stroke="rgba(255,255,255,0.16)"
+                                    strokeWidth="1"
+                                />
+
+                                <ellipse
+                                    className="prt-tunnel-ellipse"
+                                    cx="50"
+                                    cy="5.5"
+                                    rx="50"
+                                    ry="10"
+                                    fill="none"
+                                    stroke="rgba(255,255,255,0.12)"
+                                    strokeWidth="1"
+                                />
+
+                                <ellipse
+                                    className="prt-tunnel-ellipse"
+                                    cx="50"
+                                    cy="4"
+                                    rx="50"
+                                    ry="10"
+                                    fill="none"
+                                    stroke="rgba(255,255,255,0.08)"
+                                    strokeWidth="1"
+                                />
+
+                                <ellipse
+                                    className="prt-tunnel-ellipse"
+                                    cx="50"
+                                    cy="2.5"
+                                    rx="50"
+                                    ry="10"
+                                    fill="none"
+                                    stroke="rgba(255,255,255,0.05)"
+                                    strokeWidth="0.8"
+                                />
+                            </g>
+                        </svg>
                     </div>
                 )}
 

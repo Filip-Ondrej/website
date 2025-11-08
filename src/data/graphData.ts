@@ -18,7 +18,7 @@ export type ChapterLine = {
 
 export const filipRealEvents: ProgressEvent[] = [
     // Start of the Graph
-    { year: 2016, month: 1, level: 0, impactType: 'None', category: '', dotSize: 2 },
+    { year: 2016, month: 1, level: 0, impactType: 'None', category: '', dotSize: 1 },
 
     // 2016 - Taking Charge (Age 12, 6th grade)
     { year: 2016, month: 3, level: 0.6, impactType: 'National', category: 'First RoboCup Win', significant: true },
@@ -28,7 +28,7 @@ export const filipRealEvents: ProgressEvent[] = [
 
     // 2017 - Hard Lessons
     { year: 2017, month: 4, level: 1.0, impactType: 'National', category: 'RoboCup Concert' },
-    { year: 2017, month: 4.5, level: 0.7, impactType: 'Lesson', category: 'Magic Show Disaster' },
+    { year: 2017, month: 4.5, level: 0.7, impactType: 'Lesson', category: 'Magic Show Disaster', significant: true},
     { year: 2017, month: 6.2, level: 0.8, impactType: 'Regional', category: 'RBA CNC/Race'},
     { year: 2017, month: 6.5, level: 0.9, impactType: 'Regional', category: 'LegoBot Improv'},
     { year: 2017, month: 12.5, level: 1.1, impactType: 'Regional', category: 'FLL Goliath' },
@@ -60,31 +60,37 @@ export const filipRealEvents: ProgressEvent[] = [
     // 2021 - Recognition Wave
     { year: 2021, month: 1.2, level: 3.3, impactType: 'Regional', category: 'Uniting Power' },
     { year: 2021, month: 2.2, level: 3.1, impactType: 'National', category: 'Robotiada' },
-    { year: 2021, month: 3.2, level: 3.3, impactType: 'Exceptional', category: 'Just for Fun', significant: true },
-    { year: 2021, month: 4.9, level: 3.7, impactType: 'National', category: '3D Printing Master' },
-    { year: 2021, month: 5.1, level: 3.9, impactType: 'National', category: 'No Stopping Now', significant: true },
-    { year: 2021, month: 6.2, level: 3.0, impactType: 'Lesson', category: 'Istrobot' },
-    { year: 2021, month: 6.8, level: 3.0, impactType: 'International', category: 'FLL WorldCup' },
-    { year: 2021, month: 9.3, level: 3.1, impactType: 'Regional', category: 'FLL WorldCup' },
+    { year: 2021, month: 3.2, level: 3.3, impactType: 'Exceptional', category: 'Just for Fun', significant: true }, //SOC
+    { year: 2021, month: 4.9, level: 3.5, impactType: 'National', category: '3D Printing Master' },
+    { year: 2021, month: 5.1, level: 3.6, impactType: 'National', category: 'Robocup Is Back' }, // Robocup
+    { year: 2021, month: 6.2, level: 3.5, impactType: 'Lesson', category: 'Istrobot' },
+    { year: 2021, month: 6.8, level: 3.6, impactType: 'International', category: 'FLL WorldCup' },
+    { year: 2021, month: 7.1, level: 4.0, impactType: 'Exceptional', category: 'World Champions', dotSize: 8,significant: true },//Robocup
+    { year: 2021, month: 9.3, level: 3.1, impactType: 'Regional', category: 'ZENIT' },
+    { year: 2021, month: 9.6, level: 3.3, impactType: 'Regional', category: '30m Tall Statue', significant: true},
+    { year: 2021, month: 10.2, level: 3.6, impactType: 'Exceptional', category: 'Whos to Blame?', significant: true },
 
     // 2022 - Dominance (Age 18, 3rd year)
-    { year: 2022, month: 2, level: 4.5, impactType: 'International', category: 'Europe 4th + Hardware Award', significant: true },
-    { year: 2022, month: 5, level: 5.0, impactType: 'Exceptional', category: 'Regional Chairman Award', significant: true },
-    { year: 2022, month: 7, level: 5.3, impactType: 'World-Class', category: 'Best Hardware Thailand', significant: true },
-    { year: 2022, month: 10, level: 4.2, impactType: 'International', category: 'Erasmus Italy Internship' },
+    { year: 2022, month: 4, level: 3.7, impactType: 'International', category: 'Erasmus Italy Internship' },
+    { year: 2022, month: 4.7, level: 3.7, impactType: 'Regional', category: 'Becoming FLL Judge'},
+    { year: 2022, month: 4.9, level: 3.9, impactType: 'National', category: 'Full Electro Mode', significant: true },
+    { year: 2022, month: 6, level: 4.2, impactType: 'International', category: 'Europe 4th + Hardware Award', significant: true },
+    { year: 2022, month: 6.5, level: 4.4, impactType: 'Exceptional', category: 'Regional Chairman Award', significant: true },
+    { year: 2022, month: 7, level: 4.6, impactType: 'World-Class', category: 'Worlds Best Hardware', significant: true },
+    //SOC skolske kolo
 
     // 2023 - Final Victory Lap (Age 19, 4th year)
-    { year: 2023, month: 3, level: 5.5, impactType: 'Exceptional', category: '6 Categories 5 Wins', significant: true },
-    { year: 2023, month: 5, level: 5.4, impactType: 'Exceptional', category: 'Young Creator 2023', significant: true },
-    { year: 2023, month: 6, level: 4.8, impactType: 'World-Class', category: 'Valedictorian', significant: true },
-    { year: 2023, month: 6.5, level: 5.6, impactType: 'Exceptional', category: 'Bordeaux PCB Legend', significant: true },
-    { year: 2023, month: 7, level: 5.8, impactType: 'Exceptional', category: 'Saint Gorazd Award', article: '2023-07-saint-gorazd', significant: true },
+    { year: 2023, month: 4.9, level: 4.0, impactType: 'Exceptional', category: '6 Categories 5 Wins', significant: true },
+    { year: 2023, month: 5, level: 4.0, impactType: 'Exceptional', category: 'Young Creator 2023', significant: true },
+    { year: 2023, month: 6, level: 4.0, impactType: 'World-Class', category: 'Valedictorian', significant: true },
+    { year: 2023, month: 6.5, level: 4.0, impactType: 'Exceptional', category: 'Bordeaux PCB Legend', significant: true },
+    { year: 2023, month: 7, level: 4.0, impactType: 'Exceptional', category: 'Saint Gorazd Award', article: '2023-07-saint-gorazd', significant: true },
 
     // 2024 - University & Transition (Age 20)
-    { year: 2024, month: 10, level: 3.5, impactType: 'International', category: 'Hamburg TU Start' },
+    { year: 2024, month: 10, level: 4.0, impactType: 'International', category: 'Hamburg TU Start' },
 
     // 2025 - Current Focus (Age 21)
-    { year: 2025, month: 2, level: 4.2, impactType: 'World-Class', category: 'Startup Deep Dive', significant: true },
+    { year: 2025, month: 2, level: 4.0, impactType: 'World-Class', category: 'Startup Deep Dive', significant: true },
 ];
 
 export const chapterLines: ChapterLine[] = [
