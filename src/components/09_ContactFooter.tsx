@@ -86,7 +86,7 @@ export default function ContactFooter() {
                 <div className="footer-left">
                     <div className="title-container">
                         <h2 className="footer-title">
-                            <span className="title-word">LET'S</span>
+                            <span className="title-word">LETS</span>
                             <span className="title-word">WORK</span>
                             <span className="title-word">TOGETHER</span>
                         </h2>

@@ -11,7 +11,7 @@ import PressRecognitionTitle from "@/components/08_PressRecognitionTitle";
 import Recognition from '@/components/08_PressRecognition';
 import ContactTitle from "@/components/09_ContactTitle";
 
-import { LineAnchor } from '@/components/00_LineAnchor';
+//import { LineAnchor } from '@/components/00_LineAnchor';
 
 export default function Home() {
     return (
