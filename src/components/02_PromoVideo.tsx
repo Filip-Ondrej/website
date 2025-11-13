@@ -19,6 +19,7 @@ export default function ScrollVideo({
     const [isHovering, setIsHovering] = React.useState(false);
     const [isFullscreen, setIsFullscreen] = React.useState(false);
     const fullscreenIframeRef = React.useRef<HTMLIFrameElement>(null);
+    const backdropRef = React.useRef<HTMLDivElement>(null);
 
     // Extract Vimeo ID from URL
     const getVimeoId = (url: string) => {
@@ -71,69 +72,85 @@ export default function ScrollVideo({
 
     // Handle fullscreen modal and auto-close on video end
     React.useEffect(() => {
+        if (!isFullscreen) return;
+
+        const handleEsc = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                setIsFullscreen(false);
+            }
+        };
+
+        // Lock body scroll (preserve page position)
+        const scrollY = window.scrollY;
+        document.body.style.position = 'fixed';
+        document.body.style.top = `-${scrollY}px`;
+        document.body.style.width = '100%';
+
+        // Setup Vimeo listener for video end AND fullscreen changes
         const setupVimeoListener = () => {
             if (fullscreenIframeRef.current && window.Vimeo) {
                 const player = new window.Vimeo.Player(fullscreenIframeRef.current);
+
                 player.on('ended', () => {
                     setIsFullscreen(false);
+                });
+
+                // Listen for when Vimeo's native fullscreen is exited
+                player.on('fullscreenchange', (data: { fullscreen: boolean }) => {
+                    if (!data.fullscreen) {
+                        // Vimeo fullscreen was exited, recalculate line positions
+                        requestAnimationFrame(() => {
+                            window.dispatchEvent(new Event('scroll'));
+                            window.dispatchEvent(new Event('resize'));
+                        });
+                    }
                 });
             }
         };
 
-        if (isFullscreen) {
-            // Store current scroll position
-            const scrollY = window.scrollY;
-
-            // Lock body scroll with fixed positioning
-            document.body.style.position = 'fixed';
-            document.body.style.top = `-${scrollY}px`;
-            document.body.style.left = '0';
-            document.body.style.right = '0';
-            document.body.style.overflow = 'hidden';
-
-            // Load Vimeo Player API and listen for video end
-            if (!window.Vimeo) {
-                const script = document.createElement('script');
-                script.src = 'https://player.vimeo.com/api/player.js';
-                script.onload = () => {
-                    setupVimeoListener();
-                };
-                document.body.appendChild(script);
-            } else {
-                setupVimeoListener();
-            }
+        if (!window.Vimeo) {
+            const script = document.createElement('script');
+            script.src = 'https://player.vimeo.com/api/player.js';
+            script.onload = setupVimeoListener;
+            document.body.appendChild(script);
         } else {
-            // Restore scroll position
-            const scrollY = document.body.style.top;
-            document.body.style.position = '';
-            document.body.style.top = '';
-            document.body.style.left = '';
-            document.body.style.right = '';
-            document.body.style.overflow = '';
-
-            if (scrollY) {
-                window.scrollTo(0, parseInt(scrollY || '0') * -1);
-            }
+            setupVimeoListener();
         }
-
-        const handleEsc = (e: KeyboardEvent) => {
-            if (e.key === 'Escape' && isFullscreen) {
-                setIsFullscreen(false);
-            }
-        };
 
         document.addEventListener('keydown', handleEsc);
 
         return () => {
             document.removeEventListener('keydown', handleEsc);
-            // Clean up on unmount
+
+            // Reset styles
             document.body.style.position = '';
             document.body.style.top = '';
-            document.body.style.left = '';
-            document.body.style.right = '';
-            document.body.style.overflow = '';
+            document.body.style.width = '';
+
+            // Restore scroll position
+            window.scrollTo(0, scrollY);
+
+            // FORCE the ProgressLine to update by triggering scroll event
+            requestAnimationFrame(() => {
+                window.scrollTo(0, scrollY); // Ensure it's still at the right position
+                window.dispatchEvent(new Event('scroll')); // Trigger scroll event
+                window.dispatchEvent(new Event('resize')); // Also trigger resize event
+
+                // Double-check after another frame
+                requestAnimationFrame(() => {
+                    window.scrollTo(0, scrollY);
+                    window.dispatchEvent(new Event('scroll'));
+                    window.dispatchEvent(new Event('resize'));
+                });
+            });
         };
     }, [isFullscreen]);
+
+    const handleBackdropClick = (e: React.MouseEvent) => {
+        if (e.target === backdropRef.current) {
+            setIsFullscreen(false);
+        }
+    };
 
     // ONE smooth curve - no if/else, no phases, no transitions
     // Just pure ease-out
@@ -181,7 +198,7 @@ export default function ScrollVideo({
                             aspectRatio: '16 / 9',
                             transform: `translateY(${translateY}vh) scale(${scale})`,
                             transformOrigin: 'center center',
-                            borderRadius: 16,
+                            borderRadius: 0,
                             overflow: 'hidden',
                             background: 'black',
                             pointerEvents: 'auto',
@@ -243,13 +260,7 @@ export default function ScrollVideo({
                                     </filter>
                                 </defs>
                                 <path
-                                    d="M 32 19
-                                       Q 27.91 17.68 25 21
-                                       L 25 79
-                                       Q 27.91 82.32 32 81
-                                       L 85 52.5
-                                       Q 88 50 85 47.5
-                                       Z"
+                                    d="M 25 15 L 25 85 L 85 50 Z"
                                     fill="white"
                                     opacity="0.9"
                                     filter="url(#softGlow)"
@@ -267,6 +278,7 @@ export default function ScrollVideo({
             {/* Fullscreen video modal */}
             {isFullscreen && (
                 <div
+                    ref={backdropRef}
                     className="fullscreen-modal"
                     style={{
                         position: 'fixed',
@@ -277,46 +289,44 @@ export default function ScrollVideo({
                         alignItems: 'center',
                         justifyContent: 'center',
                         animation: 'fadeIn 0.3s ease-out',
+                        backdropFilter: 'blur(10px)',
                     }}
-                    onClick={(e) => {
-                        if (e.target === e.currentTarget) {
-                            setIsFullscreen(false);
-                        }
-                    }}
+                    onClick={handleBackdropClick}
+                    onWheel={(e) => e.preventDefault()}
+                    onTouchMove={(e) => e.preventDefault()}
                 >
-                    {/* Close button */}
-                    <button
-                        className="close-btn"
-                        onClick={() => setIsFullscreen(false)}
-                        aria-label="Close"
-                    >
-                        <div className="close-icon">
-                            <span className="close-line first" />
-                            <span className="close-line second" />
-                        </div>
-                    </button>
-
-                    {/* Fullscreen video */}
-                    <div
-                        style={{
-                            width: '90vw',
-                            /*height: '90vh',*/
-                            maxWidth: '1600px',
-                            aspectRatio: '16 / 9',
-                        }}
-                    >
-                        <iframe
-                            ref={fullscreenIframeRef}
-                            title="Fullscreen video"
-                            src={`https://player.vimeo.com/video/${fullscreenVideoId}?autoplay=1`}
-                            allow="autoplay; fullscreen; picture-in-picture"
-                            allowFullScreen
+                    <div className="lightbox-container">
+                        {/* Fullscreen video */}
+                        <div
                             style={{
-                                width: '100%',
-                                height: '100%',
-                                border: 'none',
+                                width: '90vw',
+                                maxWidth: '1600px',
+                                aspectRatio: '16 / 9',
                             }}
-                        />
+                        >
+                            <iframe
+                                ref={fullscreenIframeRef}
+                                title="Fullscreen video"
+                                src={`https://player.vimeo.com/video/${fullscreenVideoId}?autoplay=1`}
+                                allow="autoplay; fullscreen; picture-in-picture"
+                                allowFullScreen
+                                style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    border: 'none',
+                                }}
+                            />
+                        </div>
+
+                        {/* Close button - positioned OUTSIDE the video container */}
+                        <button
+                            className="close-btn"
+                            onClick={() => setIsFullscreen(false)}
+                            aria-label="Close"
+                        >
+                            <span className="close-line" />
+                            <span className="close-line" />
+                        </button>
                     </div>
                 </div>
             )}
@@ -327,55 +337,65 @@ export default function ScrollVideo({
                     to { opacity: 1; }
                 }
 
-                .close-btn {
-                    position: fixed;
-                    top: 32px;
-                    right: 32px;
-                    width: 48px;
-                    height: 48px;
-                    background: transparent;
-                    border: 1px solid rgba(255, 255, 255, 0.2);
-                    cursor: pointer;
-                    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-                    z-index: 10001;
+                .lightbox-container {
+                    position: relative;
+                    max-width: 90vw;
+                    max-height: 90vh;
+                    animation: scaleIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
                 }
 
-                .close-icon {
-                    position: relative;
-                    width: 20px;
-                    height: 20px;
-                    margin: auto;
+                @keyframes scaleIn {
+                    from {
+                        opacity: 0;
+                        transform: scale(0.95);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: scale(1);
+                    }
+                }
+
+                .close-btn {
+                    position: absolute;
+                    top: -50px;
+                    right: -50px;
+                    width: 44px;
+                    height: 44px;
+                    background: rgba(0, 0, 0, 0.7);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+                    backdrop-filter: blur(10px);
+                }
+
+                .close-btn:hover {
+                    background: rgba(0, 0, 0, 0.9);
+                    border-color: rgba(255, 255, 255, 0.5);
+                    transform: rotate(90deg);
                 }
 
                 .close-line {
                     position: absolute;
-                    top: 50%;
-                    left: 0;
-                    width: 100%;
-                    height: 1px;
-                    background: rgba(255, 255, 255, 0.8);
-                    transform-origin: center;
-                    transition: transform 0.3s ease, background 0.3s ease;
-                }
-
-                .close-line.first {
-                    transform: translateY(-50%) rotate(45deg);
-                }
-
-                .close-line.second {
-                    transform: translateY(-50%) rotate(-45deg);
-                }
-
-                /* Hover state – rotate + light up */
-                .close-btn:hover {
-                    border-color: rgba(255, 255, 255, 0.8);
-                    transform: rotate(90deg);
+                    width: 20px;
+                    height: 2px;
+                    background: rgba(255, 255, 255, 0.9);
+                    transition: background 0.3s ease;
                 }
 
                 .close-btn:hover .close-line {
                     background: #ffffff;
                 }
 
+                .close-line:first-child {
+                    transform: rotate(45deg);
+                }
+
+                .close-line:last-child {
+                    transform: rotate(-45deg);
+                }
 
                 /* Hide Vimeo controls and branding */
                 .video-container :global(iframe) {
@@ -400,17 +420,22 @@ export default function ScrollVideo({
                     .video-container {
                         width: calc(100vw - 200px) !important;
                     }
+                    
+                    .close-btn {
+                        top: 20px;
+                        right: 20px;
+                    }
                 }
 
                 @media (max-width: 768px) {
                     .video-container {
                         width: calc(100vw - 60px) !important;
-                        border-radius: 12px;
+                        border-radius: 0;
                     }
 
                     .close-btn {
-                        top: 16px !important;
-                        right: 16px !important;
+                        top: 10px !important;
+                        right: 10px !important;
                         width: 40px !important;
                         height: 40px !important;
                     }
@@ -432,7 +457,7 @@ declare global {
     interface Window {
         Vimeo?: {
             Player: new (iframe: HTMLIFrameElement) => {
-                on: (event: string, callback: () => void) => void;
+                on: (event: string, callback: (data: { fullscreen: boolean }) => void) => void;
             };
         };
     }

@@ -52,12 +52,15 @@ export default function Collaborations() {
         let raf: number | null = null;
         let last = performance.now();
         let paused = false;
+        let hoverTimeoutId: number | null = null;
+        let isScrollBlockActive = false;
 
         const DRIFT = 40;
         const WHEEL_GAIN = 1.2;
         const DAMPING = 0.9;
         const MIN_VEL = 2;
         const MAX_VEL = 600;
+        const HOVER_DELAY_MS = 1000; // 1 second delay before blocking scroll
 
         const compute = () => {
             W = row.scrollWidth;
@@ -95,7 +98,8 @@ export default function Collaborations() {
         };
 
         const onWheel = (e: WheelEvent) => {
-            if (rail.matches(':hover')) {
+            // Only block scroll if hover has been active for the delay period
+            if (isScrollBlockActive && rail.matches(':hover')) {
                 e.preventDefault();
                 e.stopPropagation();
                 const raw = e.deltaY !== 0 ? e.deltaY : e.deltaX;
@@ -105,8 +109,24 @@ export default function Collaborations() {
             }
         };
 
-        const onEnter = () => { paused = true; };
-        const onLeave = () => { paused = false; };
+        const onEnter = () => {
+            paused = true;
+            // Start timer for scroll blocking
+            hoverTimeoutId = window.setTimeout(() => {
+                isScrollBlockActive = true;
+            }, HOVER_DELAY_MS);
+        };
+
+        const onLeave = () => {
+            paused = false;
+            // Clear timer and disable scroll blocking
+            if (hoverTimeoutId) {
+                clearTimeout(hoverTimeoutId);
+                hoverTimeoutId = null;
+            }
+            isScrollBlockActive = false;
+        };
+
         const onFocusIn = () => { paused = true; };
         const onFocusOut = (ev: FocusEvent) => {
             if (!rail.contains(ev.relatedTarget as Node)) paused = false;
@@ -124,6 +144,7 @@ export default function Collaborations() {
 
         return () => {
             if (raf) cancelAnimationFrame(raf);
+            if (hoverTimeoutId) clearTimeout(hoverTimeoutId);
             ro.disconnect();
             rail.removeEventListener('wheel', onWheel as EventListener);
             rail.removeEventListener('mouseenter', onEnter);
@@ -253,18 +274,18 @@ export default function Collaborations() {
                     border-top: 1px solid #fff;
                     border-bottom: 1px solid #fff;
                     -webkit-mask-image: -webkit-linear-gradient(
-                        to right,
-                        rgba(0, 0, 0, 0) 0,
-                        rgba(0, 0, 0, 1) clamp(16px, 3vw, 32px),
-                        rgba(0, 0, 0, 1) calc(100% - clamp(16px, 3vw, 32px)),
-                        rgba(0, 0, 0, 0) 100%
+                            to right,
+                            rgba(0, 0, 0, 0) 0,
+                            rgba(0, 0, 0, 1) clamp(16px, 3vw, 32px),
+                            rgba(0, 0, 0, 1) calc(100% - clamp(16px, 3vw, 32px)),
+                            rgba(0, 0, 0, 0) 100%
                     );
                     mask-image: linear-gradient(
-                        to right,
-                        rgba(0, 0, 0, 0) 0,
-                        rgba(0, 0, 0, 1) clamp(16px, 3vw, 32px),
-                        rgba(0, 0, 0, 1) calc(100% - clamp(16px, 3vw, 32px)),
-                        rgba(0, 0, 0, 0) 100%
+                            to right,
+                            rgba(0, 0, 0, 0) 0,
+                            rgba(0, 0, 0, 1) clamp(16px, 3vw, 32px),
+                            rgba(0, 0, 0, 1) calc(100% - clamp(16px, 3vw, 32px)),
+                            rgba(0, 0, 0, 0) 100%
                     );
                 }
 
@@ -341,18 +362,18 @@ export default function Collaborations() {
                 .brands {
                     position: relative;
                     -webkit-mask-image: -webkit-linear-gradient(
-                        to right,
-                        rgba(0, 0, 0, 0) 0,
-                        rgba(0, 0, 0, 1) clamp(16px, 3vw, 24px),
-                        rgba(0, 0, 0, 1) calc(100% - clamp(16px, 3vw, 24px)),
-                        rgba(0, 0, 0, 0) 100%
+                            to right,
+                            rgba(0, 0, 0, 0) 0,
+                            rgba(0, 0, 0, 1) clamp(16px, 3vw, 24px),
+                            rgba(0, 0, 0, 1) calc(100% - clamp(16px, 3vw, 24px)),
+                            rgba(0, 0, 0, 0) 100%
                     );
                     mask-image: linear-gradient(
-                        to right,
-                        rgba(0, 0, 0, 0) 0,
-                        rgba(0, 0, 0, 1) clamp(16px, 3vw, 24px),
-                        rgba(0, 0, 0, 1) calc(100% - clamp(16px, 3vw, 24px)),
-                        rgba(0, 0, 0, 0) 100%
+                            to right,
+                            rgba(0, 0, 0, 0) 0,
+                            rgba(0, 0, 0, 1) clamp(16px, 3vw, 24px),
+                            rgba(0, 0, 0, 1) calc(100% - clamp(16px, 3vw, 24px)),
+                            rgba(0, 0, 0, 0) 100%
                     );
                     overflow: hidden;
                     user-select: none;
@@ -433,22 +454,22 @@ export default function Collaborations() {
                     inset: 0;
                     pointer-events: none;
                     background:
-                        linear-gradient(
-                            180deg,
-                            rgba(255, 255, 255, 0.22) 0%,
-                            rgba(255, 255, 255, 0.1) 36%,
-                            rgba(255, 255, 255, 0.04) 70%,
-                            rgba(255, 255, 255, 0) 100%
-                        ),
-                        radial-gradient(
-                            120% 60% at 50% 100%,
-                            rgba(0, 0, 0, 0.16),
-                            rgba(0, 0, 0, 0) 60%
-                        );
+                            linear-gradient(
+                                    180deg,
+                                    rgba(255, 255, 255, 0.22) 0%,
+                                    rgba(255, 255, 255, 0.1) 36%,
+                                    rgba(255, 255, 255, 0.04) 70%,
+                                    rgba(255, 255, 255, 0) 100%
+                            ),
+                            radial-gradient(
+                                    120% 60% at 50% 100%,
+                                    rgba(0, 0, 0, 0.16),
+                                    rgba(0, 0, 0, 0) 60%
+                            );
                     opacity: 0;
                     transition:
-                        opacity 0.45s cubic-bezier(0.23, 1, 0.32, 1),
-                        border-color 0.45s cubic-bezier(0.23, 1, 0.32, 1);
+                            opacity 0.45s cubic-bezier(0.23, 1, 0.32, 1),
+                            border-color 0.45s cubic-bezier(0.23, 1, 0.32, 1);
                     border-left: 1px solid rgba(255, 255, 255, 0.1);
                     border-right: 1px solid rgba(255, 255, 255, 0.1);
                     z-index: 2;
@@ -470,8 +491,8 @@ export default function Collaborations() {
                     transform: translate(-6px, 6px) scale(0.25);
                     transform-origin: bottom left;
                     transition:
-                        opacity 0.28s ease-out,
-                        transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+                            opacity 0.28s ease-out,
+                            transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
                     z-index: 3;
                 }
 

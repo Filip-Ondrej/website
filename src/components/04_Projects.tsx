@@ -329,7 +329,7 @@ export default function Projects() {
 
                 .proj-card:hover {
                     transform: scale(1.03);
-                    box-shadow: 0 32px 88px rgba(0, 0, 0, 0.7);
+                    /*box-shadow: 0 32px 88px rgba(0, 0, 0, 0.7);*/
                     border-color: rgba(255, 255, 255, 0.28);
                     background: rgba(255, 255, 255, 0.05);
                     z-index: 50;

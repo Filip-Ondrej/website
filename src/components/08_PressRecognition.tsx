@@ -185,62 +185,88 @@ export default function Recognition() {
     const [fullscreenVimeoId, setFullscreenVimeoId] =
         React.useState<string | null>(null);
     const fullscreenIframeRef = React.useRef<HTMLIFrameElement | null>(null);
+    const backdropRef = React.useRef<HTMLDivElement | null>(null);
 
     React.useEffect(() => {
+        if (!isFullscreen) return;
+
+        const handleEsc = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                setIsFullscreen(false);
+            }
+        };
+
+        // Lock body scroll (preserve page position)
+        const scrollY = window.scrollY;
+        document.body.style.position = 'fixed';
+        document.body.style.top = `-${scrollY}px`;
+        document.body.style.width = '100%';
+
+        // Setup Vimeo listener for video end AND fullscreen changes
         const setupVimeoListener = () => {
             if (fullscreenIframeRef.current && window.Vimeo) {
                 const player = new window.Vimeo.Player(fullscreenIframeRef.current);
+
                 player.on('ended', () => {
                     setIsFullscreen(false);
+                });
+
+                // Listen for when Vimeo's native fullscreen is exited
+                player.on('fullscreenchange', (data: { fullscreen: boolean }) => {
+                    if (!data.fullscreen) {
+                        // Vimeo fullscreen was exited, recalculate line positions
+                        requestAnimationFrame(() => {
+                            window.dispatchEvent(new Event('scroll'));
+                            window.dispatchEvent(new Event('resize'));
+                        });
+                    }
                 });
             }
         };
 
-        if (isFullscreen && fullscreenVimeoId) {
-            const scrollY = window.scrollY;
-            document.body.style.position = 'fixed';
-            document.body.style.top = `-${scrollY}px`;
-            document.body.style.left = '0';
-            document.body.style.right = '0';
-            document.body.style.overflow = 'hidden';
-
-            if (!window.Vimeo) {
-                const script = document.createElement('script');
-                script.src = 'https://player.vimeo.com/api/player.js';
-                script.onload = () => setupVimeoListener();
-                document.body.appendChild(script);
-            } else {
-                setupVimeoListener();
-            }
+        if (!window.Vimeo) {
+            const script = document.createElement('script');
+            script.src = 'https://player.vimeo.com/api/player.js';
+            script.onload = setupVimeoListener;
+            document.body.appendChild(script);
         } else {
-            const top = document.body.style.top;
-            document.body.style.position = '';
-            document.body.style.top = '';
-            document.body.style.left = '';
-            document.body.style.right = '';
-            document.body.style.overflow = '';
-            if (top) {
-                const scrollY = parseInt(top || '0', 10) * -1;
-                if (!Number.isNaN(scrollY)) window.scrollTo(0, scrollY);
-            }
+            setupVimeoListener();
         }
 
-        const handleEsc = (e: KeyboardEvent) => {
-            if (e.key === 'Escape' && isFullscreen) {
-                setIsFullscreen(false);
-            }
-        };
         document.addEventListener('keydown', handleEsc);
 
         return () => {
             document.removeEventListener('keydown', handleEsc);
+
+            // Reset styles
             document.body.style.position = '';
             document.body.style.top = '';
-            document.body.style.left = '';
-            document.body.style.right = '';
-            document.body.style.overflow = '';
+            document.body.style.width = '';
+
+            // Restore scroll position
+            window.scrollTo(0, scrollY);
+
+            // FORCE the ProgressLine to update by triggering scroll event
+            requestAnimationFrame(() => {
+                window.scrollTo(0, scrollY);
+                window.dispatchEvent(new Event('scroll'));
+                window.dispatchEvent(new Event('resize'));
+
+                // Double-check after another frame
+                requestAnimationFrame(() => {
+                    window.scrollTo(0, scrollY);
+                    window.dispatchEvent(new Event('scroll'));
+                    window.dispatchEvent(new Event('resize'));
+                });
+            });
         };
     }, [isFullscreen, fullscreenVimeoId]);
+
+    const handleBackdropClick = (e: React.MouseEvent) => {
+        if (e.target === backdropRef.current) {
+            setIsFullscreen(false);
+        }
+    };
 
     return (
         <>
@@ -532,7 +558,7 @@ export default function Recognition() {
                                             />
                                         )}
 
-                                        {/* Play overlay only on clickable cards */}
+                                        {/* Play overlay with new design */}
                                         <div
                                             className={
                                                 isClickable &&
@@ -547,7 +573,7 @@ export default function Recognition() {
                                                 xmlns="http://www.w3.org/2000/svg"
                                             >
                                                 <defs>
-                                                    <filter id="softGlow-recog">
+                                                    <filter id={`softGlow-${vid.id}`}>
                                                         <feGaussianBlur
                                                             stdDeviation="2"
                                                             result="coloredBlur"
@@ -559,16 +585,10 @@ export default function Recognition() {
                                                     </filter>
                                                 </defs>
                                                 <path
-                                                    d="M 32 19
-                                                       Q 27.91 17.68 25 21
-                                                       L 25 79
-                                                       Q 27.91 82.32 32 81
-                                                       L 85 52.5
-                                                       Q 88 50 85 47.5
-                                                       Z"
+                                                    d="M 25 15 L 25 85 L 85 50 Z"
                                                     fill="white"
                                                     opacity="0.9"
-                                                    filter="url(#softGlow-recog)"
+                                                    filter={`url(#softGlow-${vid.id})`}
                                                 />
                                             </svg>
                                         </div>
@@ -596,6 +616,17 @@ export default function Recognition() {
                         }
                         to {
                             opacity: 1;
+                        }
+                    }
+
+                    @keyframes scaleIn {
+                        from {
+                            opacity: 0;
+                            transform: scale(0.95);
+                        }
+                        to {
+                            opacity: 1;
+                            transform: scale(1);
                         }
                     }
 
@@ -732,15 +763,17 @@ export default function Recognition() {
                         flex-direction: column;
                         border: 1px solid rgba(255, 255, 255, 0.12);
                         background: #131315;
-                        box-shadow: 0 clamp(16px, 4vw, 32px) clamp(44px, 10vw, 88px) rgba(0, 0, 0, 0.7);
+                        box-shadow: none;  
                         overflow: hidden;
                         transform-origin: center;
+                        transform: translateZ(0) scale(1);
+                        will-change: transform, box-shadow;
                         z-index: 30;
                         transition:
-                            transform 140ms cubic-bezier(0.22, 1, 0.36, 1),
-                            box-shadow 140ms ease,
-                            border-color 120ms ease,
-                            background 120ms ease;
+                                transform 140ms cubic-bezier(0.22, 1, 0.36, 1),
+                                box-shadow 140ms ease,
+                                border-color 120ms ease,
+                                background 120ms ease;
                         cursor: default;
                     }
 
@@ -749,19 +782,23 @@ export default function Recognition() {
                     }
 
                     @media (hover: hover) {
-                        .videoCard:hover {
-                            transform: scale(1.04);
-                            box-shadow: 0 clamp(16px, 4vw, 32px) clamp(44px, 10vw, 88px) rgba(0, 0, 0, 0.7);
+                        .videoCard.clickable:hover {
+                            transform: scale(1.03);
+                            box-shadow:
+                                    /*0 32px 88px rgba(0, 0, 0, 0.7),*/
+                                    0 0 0 1px rgba(255, 255, 255, 0.08),
+                                    0 0 36px rgba(255, 255, 255, 0.12);  // Glow directly on card
                             border-color: rgba(255, 255, 255, 0.28);
                             background: #171719;
+                            z-index: 50;
                         }
                     }
 
-                    .cardCaption,
+                    /*.cardCaption,
                     .cardTitleRow,
                     .cardFooter {
                         background: #131315;
-                    }
+                    }*/
 
                     .cardCaption {
                         position: relative;
@@ -832,11 +869,15 @@ export default function Recognition() {
                     }
 
                     .playIcon {
-                        width: clamp(80px, 20vw, 180px);
-                        height: clamp(80px, 20vw, 180px);
+                        width: clamp(80px, 15vw, 140px);
+                        height: clamp(80px, 15vw, 140px);
                         filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
-                        transform: scale(1);
+                        transform: scale(0.8);
                         transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+                    }
+
+                    .playOverlay.visible .playIcon {
+                        transform: scale(1);
                     }
 
                     .cardFooter {
@@ -875,6 +916,7 @@ export default function Recognition() {
             {/* ===================== FULLSCREEN MODAL ===================== */}
             {isFullscreen && fullscreenVimeoId && (
                 <div
+                    ref={backdropRef}
                     className="fullscreenModal"
                     style={{
                         position: 'fixed',
@@ -885,93 +927,110 @@ export default function Recognition() {
                         alignItems: 'center',
                         justifyContent: 'center',
                         animation: 'fadeInRecognition 0.3s ease-out',
+                        backdropFilter: 'blur(10px)',
                     }}
-                    onClick={(e) => {
-                        if (e.target === e.currentTarget) {
-                            setIsFullscreen(false);
-                        }
-                    }}
+                    onClick={handleBackdropClick}
+                    onWheel={(e) => e.preventDefault()}
+                    onTouchMove={(e) => e.preventDefault()}
                 >
-                    <button
-                        className="recogCloseBtn"
-                        onClick={() => setIsFullscreen(false)}
-                        aria-label="Close"
-                    >
-                        <div className="recogCloseIcon">
-                            <span className="recogCloseLine first" />
-                            <span className="recogCloseLine second" />
-                        </div>
-                    </button>
-
-                    <div
-                        style={{
-                            width: 'clamp(280px, 90vw, 1600px)',
-                            aspectRatio: '16 / 9',
-                        }}
-                    >
-                        <iframe
-                            ref={fullscreenIframeRef}
-                            title="Fullscreen video"
-                            src={`https://player.vimeo.com/video/${fullscreenVimeoId}?autoplay=1`}
-                            allow="autoplay; fullscreen; picture-in-picture"
-                            allowFullScreen
+                    <div className="lightbox-container">
+                        <div
                             style={{
-                                width: '100%',
-                                height: '100%',
-                                border: 'none',
-                                background: '#000',
+                                width: '90vw',
+                                maxWidth: '1600px',
+                                aspectRatio: '16 / 9',
                             }}
-                        />
+                        >
+                            <iframe
+                                ref={fullscreenIframeRef}
+                                title="Fullscreen video"
+                                src={`https://player.vimeo.com/video/${fullscreenVimeoId}?autoplay=1`}
+                                allow="autoplay; fullscreen; picture-in-picture"
+                                allowFullScreen
+                                style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    border: 'none',
+                                    background: '#000',
+                                }}
+                            />
+                        </div>
+
+                        <button
+                            className="recogCloseBtn"
+                            onClick={() => setIsFullscreen(false)}
+                            aria-label="Close"
+                        >
+                            <span className="recogCloseLine" />
+                            <span className="recogCloseLine" />
+                        </button>
                     </div>
 
                     <style jsx>{`
-                        .recogCloseBtn {
-                            position: fixed;
-                            top: clamp(16px, 4vw, 32px);
-                            right: clamp(16px, 4vw, 32px);
-                            width: clamp(40px, 6vw, 48px);
-                            height: clamp(40px, 6vw, 48px);
-                            background: transparent;
-                            border: 1px solid rgba(255, 255, 255, 0.2);
-                            cursor: pointer;
-                            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-                            z-index: 10001;
+                        .lightbox-container {
+                            position: relative;
+                            max-width: 90vw;
+                            max-height: 90vh;
+                            animation: scaleIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
                         }
 
-                        .recogCloseIcon {
-                            position: relative;
-                            width: clamp(16px, 3vw, 20px);
-                            height: clamp(16px, 3vw, 20px);
-                            margin: auto;
+                        .recogCloseBtn {
+                            position: absolute;
+                            top: -50px;
+                            right: -50px;
+                            width: 44px;
+                            height: 44px;
+                            background: rgba(0, 0, 0, 0.7);
+                            border: 1px solid rgba(255, 255, 255, 0.2);
+                            cursor: pointer;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+                            backdrop-filter: blur(10px);
                         }
 
                         .recogCloseLine {
                             position: absolute;
-                            top: 50%;
-                            left: 0;
-                            width: 100%;
-                            height: 1px;
-                            background: rgba(255, 255, 255, 0.8);
-                            transform-origin: center;
-                            transition: transform 0.3s ease, background 0.3s ease;
+                            width: 20px;
+                            height: 2px;
+                            background: rgba(255, 255, 255, 0.9);
+                            transition: background 0.3s ease;
                         }
 
-                        .recogCloseLine.first {
-                            transform: translateY(-50%) rotate(45deg);
+                        .recogCloseLine:first-child {
+                            transform: rotate(45deg);
                         }
 
-                        .recogCloseLine.second {
-                            transform: translateY(-50%) rotate(-45deg);
+                        .recogCloseLine:last-child {
+                            transform: rotate(-45deg);
                         }
 
                         @media (hover: hover) {
                             .recogCloseBtn:hover {
-                                border-color: rgba(255, 255, 255, 0.8);
+                                background: rgba(0, 0, 0, 0.9);
+                                border-color: rgba(255, 255, 255, 0.5);
                                 transform: rotate(90deg);
                             }
 
                             .recogCloseBtn:hover .recogCloseLine {
                                 background: #ffffff;
+                            }
+                        }
+
+                        @media (max-width: 1024px) {
+                            .recogCloseBtn {
+                                top: 20px;
+                                right: 20px;
+                            }
+                        }
+
+                        @media (max-width: 768px) {
+                            .recogCloseBtn {
+                                top: 10px !important;
+                                right: 10px !important;
+                                width: 40px !important;
+                                height: 40px !important;
                             }
                         }
                     `}</style>
@@ -986,7 +1045,7 @@ declare global {
     interface Window {
         Vimeo?: {
             Player: new (iframe: HTMLIFrameElement) => {
-                on: (event: string, callback: () => void) => void;
+                on: (event: string, callback: (data: { fullscreen: boolean }) => void) => void;
             };
         };
     }

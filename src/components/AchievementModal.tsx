@@ -53,7 +53,6 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
     const containerRef = React.useRef<HTMLDivElement>(null);
     const [scrollProgress, setScrollProgress] = React.useState(0);
     const [activeSection, setActiveSection] = React.useState(0);
-    const [isReading, setIsReading] = React.useState(false);
     const [showTitle, setShowTitle] = React.useState(false);
 
     // Arrow ref – used to replay animation on hero hover and on open
@@ -68,29 +67,6 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
         const words = plain.trim().split(/\s+/).filter(Boolean).length;
         return Math.max(1, Math.ceil(words / wpm));
     }
-
-    /* Track reading state */
-    React.useEffect(() => {
-        if (!isOpen) {
-            setIsReading(false);
-            return;
-        }
-
-        let scrollTimer: NodeJS.Timeout;
-        const handleScroll = () => {
-            setIsReading(true);
-            clearTimeout(scrollTimer);
-            scrollTimer = setTimeout(() => setIsReading(false), 150);
-        };
-
-        const container = containerRef.current;
-        container?.addEventListener('scroll', handleScroll);
-
-        return () => {
-            container?.removeEventListener('scroll', handleScroll);
-            clearTimeout(scrollTimer);
-        };
-    }, [isOpen]);
 
     React.useEffect(() => {
         if (!isOpen) return;
@@ -131,11 +107,24 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
             document.removeEventListener('keydown', handleEsc);
             document.removeEventListener('keydown', handleArrowKeys);
 
-            const storedTop = document.body.style.top;
+            // Reset styles
             document.body.style.position = '';
             document.body.style.top = '';
             document.body.style.width = '';
-            window.scrollTo(0, parseInt(storedTop || '0') * -1);
+
+            // Restore scroll position
+            window.scrollTo(0, scrollY);
+
+            // FORCE the ProgressLine to update by triggering scroll event
+            requestAnimationFrame(() => {
+                window.scrollTo(0, scrollY); // Ensure it's still at the right position
+                window.dispatchEvent(new Event('scroll')); // Trigger scroll event
+
+                // Double-check after another frame
+                requestAnimationFrame(() => {
+                    window.scrollTo(0, scrollY);
+                });
+            });
         };
     }, [isOpen, onClose]);
 
@@ -308,12 +297,9 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
             ref={backdropRef}
             className="achievement-modal-backdrop"
             onClick={handleBackdropClick}
+            onWheel={(e) => e.preventDefault()}
+            onTouchMove={(e) => e.preventDefault()}
         >
-            {/* Reading indicator */}
-            <div className={`reading-indicator ${isReading ? 'active' : ''}`}>
-                <div className="reading-bar"/>
-            </div>
-
             <div
                 ref={containerRef}
                 className="achievement-modal-container"
@@ -607,42 +593,6 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                     }
                     to {
                         opacity: 1;
-                    }
-                }
-
-                /* READING INDICATOR */
-                .reading-indicator {
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    height: 1px;
-                    z-index: 1004;
-                    opacity: 0;
-                    transition: opacity 0.2s ease;
-                }
-
-                .reading-indicator.active {
-                    opacity: 1;
-                }
-
-                .reading-bar {
-                    width: 100%;
-                    height: 100%;
-                    background: linear-gradient(90deg,
-                    transparent 0%,
-                    rgba(255, 255, 255, 0.8) 50%,
-                    transparent 100%
-                    );
-                    animation: scan 1.5s linear infinite;
-                }
-
-                @keyframes scan {
-                    from {
-                        transform: translateX(-100%);
-                    }
-                    to {
-                        transform: translateX(100%);
                     }
                 }
 

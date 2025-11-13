@@ -5,7 +5,7 @@ import { generateDynamicPath } from '@/lib/00_generateDynamicPath';
 import { linePathConfig } from '@/data/00_linePathConfig';
 
 // ====== VISUAL CONFIG ======
-const STATIC_LINE_COLOR = 'rgba(255,255,255,0.15)'; // faint baseline
+const STATIC_LINE_COLOR = 'rgba(47,47,49)'; // faint baseline
 const ACTIVE_LINE_COLOR = 'rgb(255,255,255)';       // animated stroke
 const STATIC_LINE_WIDTH = 2;
 const ACTIVE_LINE_WIDTH = 4;
