@@ -720,7 +720,7 @@ export default function Recognition() {
                         place-items: center;
                         transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
                     }
-                    
+
                     @media (hover: hover) {
                         .navBtn:hover {
                             border-color: rgba(255, 255, 255, 0.8);
@@ -734,7 +734,7 @@ export default function Recognition() {
                             transform: scale(1.07);
                         }
                     }
-                    
+
                     .navBtn:active {
                         transform: scale(0.94);
                         transition-duration: 0.1s;
@@ -763,7 +763,7 @@ export default function Recognition() {
                         flex-direction: column;
                         border: 1px solid rgba(255, 255, 255, 0.12);
                         background: #131315;
-                        box-shadow: none;  
+                        box-shadow: none;
                         overflow: hidden;
                         transform-origin: center;
                         transform: translateZ(0) scale(1);

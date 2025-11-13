@@ -39,6 +39,14 @@ body {
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+    width: 100%;
+    position: relative;
+}
+
+/* Prevent elements from causing horizontal overflow */
+* {
+    box-sizing: border-box;
 }
 
 /* Base container - responsive by default */
@@ -107,6 +115,7 @@ body {
     inherits: false;
     initial-value: 1;
 }
+
 /* Make any section a container so cqi/cqh work inside */
 .cq { container-type: size; }
 
@@ -117,7 +126,7 @@ body {
     letter-spacing: 0.05em;
     color: rgba(255,255,255,0.88);
     line-height: 0.95;
-    /* container-relative sizing (tracks the hero’s size, not viewport) */
+    /* container-relative sizing (tracks the hero's size, not viewport) */
     font-size: clamp(40px, max(7cqh, 4.5cqi), 84px);
 }
 
@@ -133,4 +142,3 @@ body {
     .title-xxl-uc { font-size: clamp(40px, min(6.5vh, 5.5vw), 84px); }
     .subtitle-sm  { font-size: clamp(var(--font-sm), 1.8vw, var(--font-base)); }
 }
-

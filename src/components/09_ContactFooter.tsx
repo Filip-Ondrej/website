@@ -2,42 +2,64 @@
 
 import React from 'react';
 import { LineAnchor } from '@/components/00_LineAnchor';
+import Image from 'next/image';
 
 type ContactMethod = {
     id: string;
     label: string;
     value: string;
     href: string;
-    type: 'email' | 'link' | 'location';
+    type: 'email' | 'link';
 };
 
 const contactMethods: ContactMethod[] = [
     {
+        id: 'linkedin',
+        label: 'LINKEDIN',
+        value: 'linkedin.com/in/filip-ondrej',
+        href: 'https://linkedin.com/in/filip-ondrej',
+        type: 'link',
+    },
+    {
         id: 'email',
         label: 'EMAIL',
-        value: 'hello@filipkral.com',
-        href: 'mailto:hello@filipkral.com',
+        value: 'ondrejfilip152@gmail.com',
+        href: 'mailto:ondrejfilip152@gmail.com',
         type: 'email',
     },
     {
-        id: 'linkedin',
-        label: 'LINKEDIN',
-        value: 'linkedin.com/in/filipkral',
-        href: 'https://linkedin.com/in/filipkral',
+        id: 'cal',
+        label: 'BOOK A CALL',
+        value: 'cal.com/filipondrej/15min',
+        href: 'https://www.cal.com/filipondrej/15min',
         type: 'link',
     },
     {
         id: 'github',
         label: 'GITHUB',
-        value: 'github.com/filipkral',
-        href: 'https://github.com/filipkral',
+        value: 'github.com/filip-ondrej',
+        href: 'https://github.com/filip-ondrej',
         type: 'link',
     },
 ];
 
+// Timeline images - 10 years of robotics
+const timelineImages = [
+    { year: '2016', age: 'AGE 12', caption: 'FIRST ROBOTICS COMPETITION', src: '/timeline/2016.jpg' },
+    { year: '2017', age: 'AGE 13', caption: 'NATIONAL CHAMPION', src: '/timeline/2017.jpg' },
+    { year: '2018', age: 'AGE 14', caption: 'TEAM LEADER', src: '/timeline/2018.jpg' },
+    { year: '2019', age: 'AGE 15', caption: 'ROBOT MAGICIAN', src: '/timeline/2019.jpg' },
+    { year: '2020', age: 'AGE 16', caption: 'MONTREAL WORLD CUP', src: '/timeline/2020.jpg' },
+    { year: '2021', age: 'AGE 17', caption: 'SYDNEY 4TH PLACE', src: '/timeline/2021.jpg' },
+    { year: '2022', age: 'AGE 18', caption: 'ELECTRONICS MASTERY', src: '/timeline/2022.jpg' },
+    { year: '2023', age: 'AGE 19', caption: 'YOUNG CREATOR AWARD', src: '/timeline/2023.jpg' },
+    { year: '2024', age: 'AGE 20', caption: 'THAILAND BEST HARDWARE', src: '/timeline/2024.jpg' },
+    { year: '2025', age: 'AGE 21', caption: 'GRADUATION & FRANCE', src: '/timeline/2025.jpg' },
+];
+
 export default function ContactFooter() {
     const [vw, setVw] = React.useState(0);
-    const [hoveredContact, setHoveredContact] = React.useState<string | null>(null);
+    const [currentIndex, setCurrentIndex] = React.useState(0);
 
     React.useLayoutEffect(() => {
         const onR = () => setVw(window.innerWidth);
@@ -46,83 +68,96 @@ export default function ContactFooter() {
         return () => window.removeEventListener('resize', onR);
     }, []);
 
+    // Auto-advance every 4 seconds
+    React.useEffect(() => {
+        const timer = setInterval(() => {
+            setCurrentIndex((prev) => (prev + 1) % timelineImages.length);
+        }, 4000);
+        return () => clearInterval(timer);
+    }, []);
+
     const INSET = Math.max(20, Math.min(vw * 0.08, 100));
     const xL = INSET;
     const xR = Math.max(INSET, vw - INSET);
-    const xM = xL + (xR - xL) * 0.5;
-
-    const HEADER_HEIGHT = 60;
-    const CONTACT_AREA_HEIGHT = 'clamp(400px, 50vh, 600px)';
 
     return (
         <footer className="contact-footer">
-            {/* LINE ANCHORS */}
-            <div className="pointer-events-none absolute inset-0 z-[25]">
-                <div className="absolute left-0 top-[12px]">
+            {/* LINE ANCHORS - Top and Bottom */}
+            <div className="anchors">
+                <div className="anchor-top">
                     <LineAnchor id="footer-start-left" position="left" offsetX={100} />
                 </div>
-                <div className="absolute right-0 top-[12px]">
-                    <LineAnchor id="footer-start-right" position="right" offsetX={100} />
-                </div>
-                <div className="absolute left-0 bottom-[60px]">
+                <div className="anchor-bottom">
                     <LineAnchor id="footer-end-left" position="left" offsetX={100} />
-                </div>
-                <div className="absolute right-0 bottom-[60px]">
-                    <LineAnchor id="footer-end-right" position="right" offsetX={100} />
                 </div>
             </div>
 
-            {/* GRID LINES */}
-            <svg className="footer-grid" width={vw} height="100%">
-                <line x1={xL} y1={HEADER_HEIGHT} x2={xL} y2="100%" className="grid-line" />
-                <line x1={xM} y1={HEADER_HEIGHT} x2={xM} y2="100%" className="grid-line" />
-                <line x1={xR} y1={HEADER_HEIGHT} x2={xR} y2="100%" className="grid-line" />
-                <line x1={xL} y1={HEADER_HEIGHT} x2={xR} y2={HEADER_HEIGHT} className="grid-line" />
+            {/* GRID */}
+            <svg className="grid" width={vw} height="100%">
+                <line x1={xL} y1="0" x2={xL} y2="100%" />
+                <line x1={xR} y1="0" x2={xR} y2="100%" />
+                {/* Full-width horizontal line at top */}
+                <line x1={xL} y1="0" x2={xR} y2="0" />
             </svg>
 
-            {/* MAIN CONTENT AREA */}
-            <div className="footer-main" style={{ height: CONTACT_AREA_HEIGHT }}>
-                {/* LEFT: Big Title */}
-                <div className="footer-left">
-                    <div className="title-container">
-                        <h2 className="footer-title">
-                            <span className="title-word">LETS</span>
-                            <span className="title-word">WORK</span>
-                            <span className="title-word">TOGETHER</span>
-                        </h2>
-                        <div className="title-underline" />
+            {/* CONTENT */}
+            <div className="content">
+                {/* LEFT: Image Gallery */}
+                <div className="gallery">
+                    <div className="gallery-container">
+                        {timelineImages.map((img, i) => (
+                            <div key={img.year} className={`slide ${i === currentIndex ? 'active' : ''}`}>
+                                <Image
+                                    src={img.src}
+                                    alt={`Robotics ${img.year}`}
+                                    fill
+                                    style={{ objectFit: 'cover' }}
+                                    priority={i === 0}
+                                />
+                            </div>
+                        ))}
+
+                        {/* Info overlay - all on left */}
+                        <div className="info">
+                            <div className="age">{timelineImages[currentIndex].age}</div>
+                            <div className="year">{timelineImages[currentIndex].year}</div>
+                            <div className="caption">{timelineImages[currentIndex].caption}</div>
+                        </div>
                     </div>
 
-                    <p className="footer-tagline">
-                        Open to collaborations, consulting,<br />
-                        and full-time opportunities
-                    </p>
-                </div>
-
-                {/* RIGHT: Contact Links */}
-                <div className="footer-right">
-                    <div className="contact-list">
-                        {contactMethods.map((method, index) => (
-                            <a
-                                key={method.id}
-                                href={method.href}
-                                className={`contact-link ${hoveredContact === method.id ? 'hovered' : ''}`}
-                                onMouseEnter={() => setHoveredContact(method.id)}
-                                onMouseLeave={() => setHoveredContact(null)}
-                                target={method.type === 'link' ? '_blank' : undefined}
-                                rel={method.type === 'link' ? 'noopener noreferrer' : undefined}
-                                style={{ animationDelay: `${index * 0.1}s` }}
+                    {/* Timeline - outside image */}
+                    <div className="timeline">
+                        {timelineImages.map((img, i) => (
+                            <button
+                                key={img.year}
+                                className={`dot ${i === currentIndex ? 'active' : ''}`}
+                                onClick={() => setCurrentIndex(i)}
                             >
-                                <span className="contact-label">{method.label}</span>
-                                <span className="contact-value">{method.value}</span>
-                                <div className="contact-arrow">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <path d="M7 17L17 7M17 7H7M17 7V17"/>
-                                    </svg>
-                                </div>
-                            </a>
+                                <span className="label">{img.year}</span>
+                            </button>
                         ))}
                     </div>
+                </div>
+
+                {/* RIGHT: Contact */}
+                <div className="contact">
+                    {contactMethods.map((c) => (
+                        <a
+                            key={c.id}
+                            href={c.href}
+                            className="link"
+                            target={c.type === 'link' ? '_blank' : undefined}
+                            rel={c.type === 'link' ? 'noopener noreferrer' : undefined}
+                        >
+                            <span className="label">{c.label}</span>
+                            <span className="value">{c.value}</span>
+                            <div className="arrow">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M7 17L17 7M17 7H7M17 7V17"/>
+                                </svg>
+                            </div>
+                        </a>
+                    ))}
 
                     <div className="availability-badge">
                         <div className="badge-dot" />
@@ -131,17 +166,14 @@ export default function ContactFooter() {
                 </div>
             </div>
 
-            {/* BOTTOM BAR */}
-            <div className="footer-bottom">
-                <div className="bottom-content" style={{ padding: `0 ${INSET}px` }}>
-                    <div className="bottom-left">
-                        <span className="bottom-item">© 2025 FILIP KRAL</span>
-                        <span className="bottom-divider">/</span>
-                        <span className="bottom-item">HAMBURG, GERMANY</span>
-                    </div>
-                    <div className="bottom-right">
-                        <span className="bottom-item">DESIGNED & ENGINEERED WITH PRECISION</span>
-                    </div>
+            {/* FOOTER BAR */}
+            <div className="bar">
+                <div className="bar-inner">
+                    <span>© 2025 FILIP ONDREJ</span>
+                    <span className="divider">/</span>
+                    <span>10 YEARS OF ROBOTICS</span>
+                    <span className="spacer" />
+                    <span>DESIGNED & ENGINEERED WITH PRECISION</span>
                 </div>
             </div>
 
@@ -149,145 +181,196 @@ export default function ContactFooter() {
                 .contact-footer {
                     position: relative;
                     width: 100%;
-                    min-height: clamp(600px, 70vh, 800px);
                     background: transparent;
                     font-family: 'Rajdhani', monospace;
-                    overflow: hidden;
-                    display: flex;
-                    flex-direction: column;
+                    margin-top: 0;
+                    padding-top: 0;
                 }
 
-                .footer-grid {
+                /* LINE ANCHORS */
+                .anchors {
+                    position: absolute;
+                    inset: 0;
+                    pointer-events: none;
+                    z-index: 25;
+                }
+
+                .anchor-top {
                     position: absolute;
                     left: 0;
                     top: 0;
+                }
+
+                .anchor-bottom {
+                    position: absolute;
+                    left: 0;
+                    bottom: 0;
+                }
+
+                /* GRID */
+                .grid {
+                    position: absolute;
+                    inset: 0;
                     pointer-events: none;
                     z-index: 0;
                 }
 
-                .grid-line {
-                    stroke: rgba(255, 255, 255, 0.12);
+                .grid line {
+                    stroke: rgba(255, 255, 255, 0.08);
                     stroke-width: 1;
                     shape-rendering: crispEdges;
                 }
 
-                /* MAIN CONTENT AREA */
-                .footer-main {
+                /* CONTENT */
+                .content {
                     position: relative;
                     z-index: 1;
                     display: grid;
-                    grid-template-columns: 1fr 1fr;
-                    gap: clamp(40px, 8vw, 100px);
-                    padding: clamp(60px, 10vh, 120px) ${INSET}px clamp(60px, 10vh, 120px);
-                    align-items: center;
-                    flex: 1;
+                    grid-template-columns: 1.2fr 1fr;
+                    padding: 0 ${INSET}px 0;
+                    gap: clamp(40px, 6vw, 60px);
+                    align-items: stretch;
+                    margin-top: 0;
                 }
 
-                /* LEFT SIDE - Title */
-                .footer-left {
-                    display: flex;
-                    flex-direction: column;
-                    gap: clamp(30px, 5vh, 50px);
-                    opacity: 0;
-                    animation: slideInLeft 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards;
-                }
-
-                @keyframes slideInLeft {
-                    from {
-                        opacity: 0;
-                        transform: translateX(-40px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateX(0);
-                    }
-                }
-
-                .title-container {
-                    position: relative;
-                }
-
-                .footer-title {
-                    font-size: clamp(42px, 7vw, 96px);
-                    font-weight: 900;
-                    line-height: 0.95;
-                    letter-spacing: -0.02em;
-                    color: #fff;
-                    margin: 0;
-                    display: flex;
-                    flex-direction: column;
-                    gap: clamp(4px, 1vh, 8px);
-                }
-
-                .title-word {
-                    display: block;
-                    position: relative;
-                }
-
-                .title-underline {
-                    margin-top: clamp(16px, 3vh, 24px);
-                    width: clamp(80px, 15vw, 160px);
-                    height: 3px;
-                    background: linear-gradient(90deg,
-                    rgba(255, 255, 255, 0.8) 0%,
-                    rgba(255, 255, 255, 0.3) 100%
-                    );
-                    box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
-                }
-
-                .footer-tagline {
-                    font-size: clamp(15px, 2.5vw, 20px);
-                    font-weight: 400;
-                    line-height: 1.6;
-                    color: rgba(255, 255, 255, 0.7);
-                    margin: 0;
-                    max-width: 400px;
-                }
-
-                /* RIGHT SIDE - Contact List */
-                .footer-right {
-                    display: flex;
-                    flex-direction: column;
-                    gap: clamp(30px, 5vh, 50px);
-                    opacity: 0;
-                    animation: slideInRight 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.4s forwards;
-                }
-
-                @keyframes slideInRight {
-                    from {
-                        opacity: 0;
-                        transform: translateX(40px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateX(0);
-                    }
-                }
-
-                .contact-list {
+                /* LEFT: Gallery */
+                .gallery {
                     display: flex;
                     flex-direction: column;
                     gap: 0;
                 }
 
-                .contact-link {
+                .gallery-container {
+                    position: relative;
+                    width: 100%;
+                    aspect-ratio: 16 / 9;
+                    overflow: hidden;
+                    border-left: 1px solid rgba(255, 255, 255, 0.1);
+                    border-right: 1px solid rgba(255, 255, 255, 0.1);
+                    border-top: 1px solid rgba(255, 255, 255, 0.1);
+                    background: #000;
+                }
+
+                .slide {
+                    position: absolute;
+                    inset: 0;
+                    opacity: 0;
+                    transition: opacity 0.8s ease;
+                }
+
+                .slide.active {
+                    opacity: 1;
+                }
+
+                .info {
+                    position: absolute;
+                    bottom: clamp(20px, 4vh, 30px);
+                    left: clamp(20px, 4vw, 30px);
+                    z-index: 2;
+                    display: flex;
+                    flex-direction: column;
+                    gap: clamp(4px, 1vh, 6px);
+                    max-width: 300px;
+                }
+
+                .age {
+                    font-size: clamp(10px, 1.5vw, 11px);
+                    font-weight: 600;
+                    letter-spacing: 0.2em;
+                    text-transform: uppercase;
+                    color: rgba(255, 255, 255, 0.5);
+                }
+
+                .year {
+                    font-size: clamp(40px, 7vw, 64px);
+                    font-weight: 900;
+                    line-height: 0.9;
+                    letter-spacing: -0.02em;
+                    color: rgba(255, 255, 255, 0.95);
+                }
+
+                .caption {
+                    font-size: clamp(12px, 2vw, 15px);
+                    font-weight: 600;
+                    letter-spacing: 0.15em;
+                    text-transform: uppercase;
+                    color: rgba(255, 255, 255, 0.7);
+                }
+
+                /* Timeline */
+                .timeline {
+                    display: flex;
+                    gap: 0;
+                    border-left: 1px solid rgba(255, 255, 255, 0.1);
+                    border-right: 1px solid rgba(255, 255, 255, 0.1);
+                }
+
+                .dot {
+                    flex: 1;
+                    background: transparent;
+                    border: none;
+                    cursor: pointer;
+                    padding: clamp(12px, 2vh, 16px) 0;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 0;
+                    border-top: 2px solid rgba(255, 255, 255, 0.1);
+                    transition: border-color 0.3s ease;
+                }
+
+                .dot.active {
+                    border-top-color: rgba(255, 255, 255, 0.9);
+                }
+
+                .dot:hover {
+                    border-top-color: rgba(255, 255, 255, 0.3);
+                }
+
+                .dot .label {
+                    font-size: clamp(9px, 1.3vw, 10px);
+                    font-weight: 600;
+                    letter-spacing: 0.1em;
+                    color: rgba(255, 255, 255, 0.4);
+                    transition: color 0.3s ease;
+                }
+
+                .dot.active .label {
+                    color: rgba(255, 255, 255, 0.9);
+                }
+
+                .dot:hover .label {
+                    color: rgba(255, 255, 255, 0.7);
+                }
+
+                /* RIGHT: Contact */
+                .contact {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0;
+                    justify-content: flex-start;
+                    margin-left: calc(-1 * clamp(40px, 6vw, 60px));
+                }
+
+                .link {
                     position: relative;
                     display: grid;
-                    grid-template-columns: clamp(80px, 15vw, 120px) 1fr auto;
+                    grid-template-columns: clamp(80px, 12vw, 100px) 1fr auto;
                     align-items: center;
                     gap: clamp(16px, 3vw, 24px);
-                    padding: clamp(20px, 3.5vh, 28px) clamp(20px, 3vw, 32px);
+                    padding: clamp(18px, 3vh, 22px) clamp(20px, 3vw, 32px);
+                    padding-right: calc(${INSET}px + clamp(20px, 3vw, 32px));
                     text-decoration: none;
                     border-top: 1px solid rgba(255, 255, 255, 0.08);
-                    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
                     background: transparent;
+                    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
                 }
 
-                .contact-link:last-child {
-                    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+                .link:first-child {
+                    border-top: none;
                 }
 
-                .contact-link::before {
+                .link::before {
                     content: '';
                     position: absolute;
                     left: 0;
@@ -300,51 +383,54 @@ export default function ContactFooter() {
                     transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
                 }
 
-                .contact-link:hover {
+                .link:hover {
                     background: rgba(255, 255, 255, 0.03);
                     padding-left: clamp(28px, 4vw, 40px);
                 }
 
-                .contact-link:hover::before {
+                .link:hover::before {
                     transform: scaleY(1);
                 }
 
-                .contact-label {
-                    font-size: clamp(10px, 1.8vw, 11px);
+                .link .label {
+                    font-size: clamp(9px, 1.3vw, 10px);
                     font-weight: 600;
                     letter-spacing: 0.2em;
-                    color: rgba(255, 255, 255, 0.5);
                     text-transform: uppercase;
+                    color: rgba(255, 255, 255, 0.4);
                     transition: color 0.3s ease;
+                    grid-column: 1;
                 }
 
-                .contact-link:hover .contact-label {
+                .link:hover .label {
                     color: rgba(255, 255, 255, 0.8);
                 }
 
-                .contact-value {
-                    font-size: clamp(16px, 3vw, 22px);
+                .link .value {
+                    font-size: clamp(17px, 2.8vw, 22px);
                     font-weight: 600;
-                    color: rgba(255, 255, 255, 0.85);
                     letter-spacing: -0.01em;
+                    color: rgba(255, 255, 255, 0.85);
                     transition: all 0.3s ease;
+                    grid-column: 2;
                 }
 
-                .contact-link:hover .contact-value {
+                .link:hover .value {
                     color: #fff;
                     text-shadow: 0 0 16px rgba(255, 255, 255, 0.2);
                 }
 
-                .contact-arrow {
+                .link .arrow {
                     width: clamp(18px, 3vw, 20px);
                     height: clamp(18px, 3vw, 20px);
                     color: rgba(255, 255, 255, 0.3);
                     opacity: 0;
                     transform: translate(-8px, 0) scale(0.8);
                     transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+                    grid-column: 3;
                 }
 
-                .contact-link:hover .contact-arrow {
+                .link:hover .arrow {
                     opacity: 1;
                     transform: translate(0, 0) scale(1);
                     color: rgba(255, 255, 255, 0.8);
@@ -355,10 +441,12 @@ export default function ContactFooter() {
                     display: flex;
                     align-items: center;
                     gap: clamp(10px, 2vw, 12px);
-                    padding: clamp(12px, 2vh, 16px) clamp(20px, 3vw, 24px);
+                    padding: clamp(16px, 3vh, 20px) clamp(20px, 3vw, 32px);
                     background: rgba(255, 255, 255, 0.05);
                     border: 1px solid rgba(255, 255, 255, 0.1);
                     width: max-content;
+                    margin-top: clamp(20px, 3vh, 30px);
+                    margin-left: clamp(10px, 3vw, 32px);
                 }
 
                 .badge-dot {
@@ -389,99 +477,88 @@ export default function ContactFooter() {
                     text-transform: uppercase;
                 }
 
-                /* BOTTOM BAR */
-                .footer-bottom {
+                /* FOOTER BAR */
+                .bar {
                     position: relative;
                     z-index: 1;
                     border-top: 1px solid rgba(255, 255, 255, 0.08);
-                    padding: clamp(20px, 3vh, 30px) 0;
-                    margin-top: auto;
+                    padding: clamp(32px, 4vh, 40px) calc(${INSET}px + clamp(30px, 5vw, 50px));
+                    background: transparent;
                 }
 
-                .bottom-content {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    gap: clamp(20px, 4vw, 40px);
-                }
-
-                .bottom-left,
-                .bottom-right {
+                .bar-inner {
                     display: flex;
                     align-items: center;
-                    gap: clamp(10px, 2vw, 16px);
-                    font-size: clamp(9px, 1.6vw, 10px);
-                    letter-spacing: 0.15em;
-                    color: rgba(255, 255, 255, 0.4);
-                    text-transform: uppercase;
+                    gap: clamp(12px, 2vw, 16px);
+                    font-size: clamp(9px, 1.3vw, 10px);
                     font-weight: 500;
+                    letter-spacing: 0.15em;
+                    text-transform: uppercase;
+                    color: rgba(255, 255, 255, 0.35);
                 }
 
-                .bottom-divider {
-                    color: rgba(255, 255, 255, 0.2);
+                .divider {
+                    color: rgba(255, 255, 255, 0.15);
+                }
+
+                .spacer {
+                    flex: 1;
                 }
 
                 /* RESPONSIVE */
-                @media (max-width: 968px) {
-                    .footer-main {
+                @media (max-width: 1024px) {
+                    .content {
                         grid-template-columns: 1fr;
-                        gap: clamp(50px, 8vh, 80px);
-                        padding: clamp(50px, 8vh, 80px) ${INSET}px;
+                        gap: clamp(50px, 8vh, 70px);
+                    }
+                }
+
+                @media (max-width: 768px) {
+                    .timeline {
+                        overflow-x: auto;
+                        scrollbar-width: none;
                     }
 
-                    .footer-title {
-                        font-size: clamp(36px, 10vw, 72px);
+                    .timeline::-webkit-scrollbar {
+                        display: none;
                     }
 
-                    .contact-link {
+                    .dot {
+                        min-width: 50px;
+                    }
+
+                    .link {
                         grid-template-columns: 1fr;
-                        gap: clamp(8px, 2vh, 12px);
+                        gap: clamp(8px, 2vh, 10px);
                     }
 
-                    .contact-label {
-                        order: 1;
+                    .link .label {
+                        grid-column: 1;
                     }
 
-                    .contact-value {
-                        order: 2;
+                    .link .value {
+                        grid-column: 1;
                     }
 
-                    .contact-arrow {
+                    .link .arrow {
                         display: none;
                     }
                 }
 
                 @media (max-width: 640px) {
-                    .bottom-content {
-                        flex-direction: column;
-                        align-items: flex-start;
-                        gap: clamp(12px, 2vh, 16px);
-                    }
-
-                    .bottom-left,
-                    .bottom-right {
+                    .bar-inner {
                         flex-wrap: wrap;
                     }
 
-                    .availability-badge {
-                        width: 100%;
-                        justify-content: center;
+                    .spacer {
+                        display: none;
                     }
                 }
 
                 @media (prefers-reduced-motion: reduce) {
-                    .footer-left,
-                    .footer-right {
-                        animation: none;
-                        opacity: 1;
-                    }
-
-                    .badge-dot {
-                        animation: none;
-                    }
-
                     * {
                         transition: none !important;
+                        animation: none !important;
                     }
                 }
             `}</style>

@@ -416,8 +416,19 @@ export const linePathConfig: PathSegment[] = [
     // 5. Go down on LEFT side
     {
         from: 'cft-bottom-left',
-        to: 'wkekufwiufep',
+        to: 'footer-start-left',
         type: 'vertical',
         sectionNumber: 11,
+    },
+
+    // ============================================
+    // SECTION 1: HERO
+    // Simple vertical line down the left side
+    // ============================================
+    {
+        from: 'footer-start-left',
+        to: 'footer-end-left',
+        type: 'vertical',
+        sectionNumber: 12,
     },
 ];
