@@ -582,7 +582,7 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    padding: clamp(12px, 3vw, 20px);
+                    padding: clamp(12px, 2vh, 24px);
                     animation: fadeIn 0.3s ease-out;
                     overflow: hidden;
                 }
@@ -596,12 +596,12 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                     }
                 }
 
-                /* MODAL CONTAINER - Fully responsive */
+                /* MODAL CONTAINER - Perfect 1:1 square that scales responsively */
                 .achievement-modal-container {
-                    width: 100%;
-                    height: 100%;
-                    max-width: min(900px, 90vw);
-                    max-height: min(900px, 90vh);
+                    /* Calculate size based on smallest viewport dimension with padding */
+                    width: min(90vmin, 900px);
+                    height: min(90vmin, 900px);
+                    aspect-ratio: 1 / 1;
                     background: #000;
                     border: 1px solid rgba(255, 255, 255, 0.1);
                     overflow-y: auto;
@@ -620,15 +620,15 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                 @keyframes slideIn {
                     from {
                         opacity: 0;
-                        transform: translateY(40px);
+                        transform: translateY(40px) scale(0.95);
                     }
                     to {
                         opacity: 1;
-                        transform: translateY(0);
+                        transform: translateY(0) scale(1);
                     }
                 }
 
-                /* PROGRESS SYSTEM - Fully responsive */
+                /* PROGRESS SYSTEM - Scales with modal size */
                 .progress-system {
                     position: sticky;
                     top: 0;
@@ -641,8 +641,8 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                     display: grid;
                     grid-template-columns: 1fr auto 1fr;
                     align-items: center;
-                    padding: 0 clamp(12px, 3vw, 20px);
-                    height: clamp(50px, 10vh, 60px);
+                    padding: 0 clamp(12px, 2vmin, 20px);
+                    height: clamp(50px, 7vmin, 60px);
                     overflow: hidden;
                 }
 
@@ -674,17 +674,17 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                 .impact-scale {
                     display: flex;
                     align-items: center;
-                    gap: clamp(6px, 1.5vw, 8px);
+                    gap: clamp(6px, 1vmin, 8px);
                 }
 
                 .impact-dot {
-                    width: clamp(8px, 1.8vw, 10px);
-                    height: clamp(8px, 1.8vw, 10px);
+                    width: clamp(8px, 1.2vmin, 10px);
+                    height: clamp(8px, 1.2vmin, 10px);
                     border-radius: 50%;
                 }
 
                 .impact-label {
-                    font: 600 clamp(9px, 2vw, 11px)/1 'Rajdhani', monospace;
+                    font: 600 clamp(9px, 1.3vmin, 11px)/1 'Rajdhani', monospace;
                     letter-spacing: 0.12em;
                     text-transform: uppercase;
                     color: rgba(255, 255, 255, 0.8);
@@ -692,11 +692,11 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                 }
 
                 .panel-title {
-                    font: 600 clamp(11px, 2.2vw, 13px)/1.2 'Rajdhani', monospace;
+                    font: 600 clamp(11px, 1.5vmin, 13px)/1.2 'Rajdhani', monospace;
                     color: rgba(255, 255, 255, 0.8);
                     opacity: 0;
                     transform: translateY(12px);
-                    max-width: clamp(160px, 35vw, 220px);
+                    max-width: clamp(160px, 25vmin, 220px);
                     overflow: hidden;
                     text-overflow: ellipsis;
                     white-space: nowrap;
@@ -711,12 +711,12 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                     opacity: 1;
                     transform: translateY(0);
                     max-height: 40px;
-                    margin-top: clamp(4px, 1.2vw, 6px);
+                    margin-top: clamp(4px, 0.7vmin, 6px);
                 }
 
                 .section-dots {
                     display: flex;
-                    gap: clamp(16px, 5vw, 32px);
+                    gap: clamp(16px, 3vmin, 32px);
                     justify-content: center;
                     align-items: center;
                     transform: translateY(2px);
@@ -727,11 +727,11 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                     background: transparent;
                     border: none;
                     cursor: pointer;
-                    padding: clamp(6px, 1.5vw, 8px);
+                    padding: clamp(6px, 1vmin, 8px);
                     display: flex;
                     flex-direction: column;
                     align-items: center;
-                    gap: clamp(6px, 1.5vw, 8px);
+                    gap: clamp(6px, 1vmin, 8px);
                     transition: all 0.3s ease;
                 }
 
@@ -740,8 +740,8 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                 }
 
                 .section-dot-inner {
-                    width: clamp(8px, 1.8vw, 10px);
-                    height: clamp(8px, 1.8vw, 10px);
+                    width: clamp(8px, 1.2vmin, 10px);
+                    height: clamp(8px, 1.2vmin, 10px);
                     background: rgba(255, 255, 255, 0.2);
                     border: 2px solid rgba(255, 255, 255, 0.4);
                     border-radius: 50%;
@@ -761,7 +761,7 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                 }
 
                 .section-label {
-                    font: 400 clamp(8px, 1.8vw, 10px)/1 'Rajdhani', monospace;
+                    font: 400 clamp(8px, 1.2vmin, 10px)/1 'Rajdhani', monospace;
                     letter-spacing: 0.12em;
                     text-transform: uppercase;
                     color: rgba(255, 255, 255, 0.5);
@@ -778,8 +778,8 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                 }
 
                 .close-btn-panel {
-                    width: clamp(28px, 6vw, 32px);
-                    height: clamp(28px, 6vw, 32px);
+                    width: clamp(28px, 4vmin, 32px);
+                    height: clamp(28px, 4vmin, 32px);
                     background: transparent;
                     border: 1px solid rgba(255, 255, 255, 0.2);
                     cursor: pointer;
@@ -795,8 +795,8 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
 
                 .close-icon {
                     position: relative;
-                    width: clamp(12px, 2.5vw, 14px);
-                    height: clamp(12px, 2.5vw, 14px);
+                    width: clamp(12px, 1.8vmin, 14px);
+                    height: clamp(12px, 1.8vmin, 14px);
                     margin: auto;
                 }
 
@@ -822,7 +822,7 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                     background: #fff;
                 }
 
-                /* HERO SECTION - Fully responsive */
+                /* HERO SECTION - Scales with modal */
                 .hero-section {
                     position: relative;
                     width: 100%;
@@ -864,14 +864,14 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                 .hero-content {
                     position: relative;
                     z-index: 2;
-                    padding: clamp(30px, 8vw, 60px);
+                    padding: clamp(30px, 5vmin, 60px);
                     width: 100%;
                 }
 
                 .hero-meta {
                     display: flex;
                     align-items: center;
-                    gap: clamp(10px, 2.5vw, 16px);
+                    gap: clamp(10px, 1.5vmin, 16px);
                     margin-bottom: 2px;
                     opacity: 0;
                     animation: fadeInUp 0.6s 0.2s ease forwards;
@@ -879,7 +879,7 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                 }
 
                 .meta-item {
-                    font: 400 clamp(9px, 2vw, 11px)/1 'Rajdhani', monospace;
+                    font: 400 clamp(9px, 1.3vmin, 11px)/1 'Rajdhani', monospace;
                     letter-spacing: 0.15em;
                     text-transform: uppercase;
                     color: rgba(255, 255, 255, 0.6);
@@ -890,9 +890,9 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                 }
 
                 .hero-title {
-                    font: 700 clamp(28px, 7vw, 64px)/1 'Rajdhani', monospace;
+                    font: 700 clamp(28px, 5vmin, 64px)/1 'Rajdhani', monospace;
                     color: #fff;
-                    margin: 0 0 clamp(8px, 2vw, 10px) 0;
+                    margin: 0 0 clamp(8px, 1.2vmin, 10px) 0;
                     letter-spacing: -0.02em;
                     opacity: 0;
                     animation: fadeInUp 0.6s 0.3s ease forwards;
@@ -904,7 +904,7 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                 }
 
                 .hero-hook {
-                    font: 400 clamp(14px, 3vw, 22px)/1.4 'Rajdhani', monospace;
+                    font: 400 clamp(14px, 2vmin, 22px)/1.4 'Rajdhani', monospace;
                     color: rgba(255, 255, 255, 0.9);
                     margin: 0 0 6px 0;
                     max-width: 650px;
@@ -914,7 +914,7 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
 
                 .scroll-indicator {
                     position: absolute;
-                    bottom: clamp(-10px, -2vw, -15px);
+                    bottom: clamp(-10px, -1.5vmin, -15px);
                     left: 0;
                     right: 0;
                     margin: 0 auto;
@@ -926,11 +926,11 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                     opacity: 0;
                     animation: fadeInUp 0.8s 0.8s ease forwards;
                     transition: transform 0.3s ease;
-                    padding: clamp(15px, 3vw, 20px);
+                    padding: clamp(15px, 2.5vmin, 20px);
                     display: flex;
                     flex-direction: column;
                     align-items: center;
-                    gap: clamp(6px, 1.5vw, 8px);
+                    gap: clamp(6px, 1vmin, 8px);
                 }
 
                 .scroll-indicator:hover {
@@ -938,7 +938,7 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                 }
 
                 .scroll-text {
-                    font: 400 clamp(10px, 2.2vw, 13px)/1 'Rajdhani', monospace;
+                    font: 400 clamp(10px, 1.5vmin, 13px)/1 'Rajdhani', monospace;
                     letter-spacing: 0.12em;
                     text-transform: uppercase;
                     color: rgba(255, 255, 255, 0.7);
@@ -954,8 +954,8 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                     stroke: rgba(255, 255, 255, 0.5);
                     transition: stroke 0.3s ease;
                     display: block;
-                    width: clamp(20px, 4vw, 24px);
-                    height: clamp(20px, 4vw, 24px);
+                    width: clamp(20px, 3vmin, 24px);
+                    height: clamp(20px, 3vmin, 24px);
                 }
 
                 .scroll-arrow-anim {
@@ -990,13 +990,13 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                     }
                 }
 
-                /* SECTION HEADERS - Fully responsive */
+                /* SECTION HEADERS - Scale with modal */
                 .section-header {
                     display: flex;
                     align-items: center;
-                    gap: clamp(12px, 2.5vw, 16px);
-                    margin-bottom: clamp(30px, 6vw, 40px);
-                    padding: 0 clamp(30px, 6vw, 60px) clamp(12px, 2.5vw, 16px) clamp(30px, 6vw, 60px);
+                    gap: clamp(12px, 2vmin, 16px);
+                    margin-bottom: clamp(30px, 4vmin, 40px);
+                    padding: 0 clamp(30px, 4vmin, 60px) clamp(12px, 2vmin, 16px) clamp(30px, 4vmin, 60px);
                     max-width: 900px;
                     margin-left: auto;
                     margin-right: auto;
@@ -1017,25 +1017,25 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                 .section-header > div:first-child {
                     display: flex;
                     align-items: center;
-                    gap: clamp(12px, 2.5vw, 16px);
+                    gap: clamp(12px, 2vmin, 16px);
                 }
 
                 .section-number {
-                    font: 700 clamp(24px, 5vw, 32px)/1 'Rajdhani', monospace;
+                    font: 700 clamp(24px, 3.5vmin, 32px)/1 'Rajdhani', monospace;
                     color: rgba(255, 255, 255, 0.5);
                     letter-spacing: -0.02em;
                 }
 
                 .section-title {
-                    font: 500 clamp(9px, 2vw, 11px)/1 'Rajdhani', monospace;
+                    font: 500 clamp(9px, 1.3vmin, 11px)/1 'Rajdhani', monospace;
                     letter-spacing: 0.2em;
                     text-transform: uppercase;
                     color: rgba(255, 255, 255, 0.7);
                 }
 
-                /* STAKES SECTION - Fully responsive */
+                /* STAKES SECTION */
                 .stakes-section {
-                    padding: clamp(30px, 6vw, 50px) 0;
+                    padding: clamp(30px, 4vmin, 50px) 0;
                     background: linear-gradient(
                             to bottom,
                             rgba(255, 255, 255, 0.02) 0%,
@@ -1046,15 +1046,15 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                 .stakes-container {
                     display: grid;
                     grid-template-columns: 1fr auto 1fr;
-                    gap: clamp(20px, 4vw, 30px);
+                    gap: clamp(20px, 3vmin, 30px);
                     align-items: stretch;
                     max-width: 900px;
                     margin: 0 auto;
-                    padding: 0 clamp(30px, 6vw, 60px);
+                    padding: 0 clamp(30px, 4vmin, 60px);
                 }
 
                 .stake-card {
-                    padding: clamp(20px, 4vw, 28px);
+                    padding: clamp(20px, 3vmin, 28px);
                     background: rgba(255, 255, 255, 0.05);
                     border: 1px solid rgba(255, 255, 255, 0.15);
                     position: relative;
@@ -1113,13 +1113,13 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                 .stake-header {
                     display: flex;
                     align-items: center;
-                    gap: clamp(8px, 1.8vw, 10px);
-                    margin-bottom: clamp(12px, 2.5vw, 16px);
+                    gap: clamp(8px, 1.2vmin, 10px);
+                    margin-bottom: clamp(12px, 2vmin, 16px);
                 }
 
                 .stake-icon {
-                    width: clamp(16px, 3.5vw, 20px);
-                    height: clamp(16px, 3.5vw, 20px);
+                    width: clamp(16px, 2.5vmin, 20px);
+                    height: clamp(16px, 2.5vmin, 20px);
                     display: flex;
                     align-items: center;
                     justify-content: center;
@@ -1139,7 +1139,7 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                 }
 
                 .stake-label {
-                    font: 600 clamp(9px, 2vw, 11px)/1 'Rajdhani', monospace;
+                    font: 600 clamp(9px, 1.3vmin, 11px)/1 'Rajdhani', monospace;
                     letter-spacing: 0.2em;
                     text-transform: uppercase;
                     color: rgba(255, 255, 255, 0.7);
@@ -1152,7 +1152,7 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                 }
 
                 .stake-card p {
-                    font: 400 clamp(14px, 2.8vw, 16px)/1.6 'Rajdhani', monospace;
+                    font: 400 clamp(14px, 2vmin, 16px)/1.6 'Rajdhani', monospace;
                     color: rgba(255, 255, 255, 0.9);
                     margin: 0;
                     transition: color 0.4s ease, text-shadow 0.4s ease;
@@ -1168,23 +1168,23 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                 .stakes-divider {
                     display: flex;
                     align-items: center;
-                    gap: clamp(8px, 2vw, 12px);
+                    gap: clamp(8px, 1.5vmin, 12px);
                 }
 
                 .divider-line {
-                    width: clamp(15px, 3vw, 20px);
+                    width: clamp(15px, 2.5vmin, 20px);
                     height: 1px;
                     background: rgba(255, 255, 255, 0.1);
                 }
 
                 .divider-arrow {
-                    font-size: clamp(16px, 3.5vw, 20px);
+                    font-size: clamp(16px, 2.5vmin, 20px);
                     color: rgba(255, 255, 255, 0.3);
                 }
 
-                /* METRICS - Fully responsive */
+                /* METRICS */
                 .metrics-section {
-                    padding: clamp(15px, 3vw, 20px) clamp(30px, 6vw, 60px) clamp(30px, 6vw, 40px) clamp(30px, 6vw, 60px);
+                    padding: clamp(15px, 2.5vmin, 20px) clamp(30px, 4vmin, 60px) clamp(30px, 4vmin, 40px) clamp(30px, 4vmin, 60px);
                     background: #000;
                     position: relative;
                     overflow: hidden;
@@ -1203,17 +1203,17 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                 .metrics-grid {
                     display: flex;
                     flex-wrap: wrap;
-                    gap: clamp(12px, 2.5vw, 16px);
+                    gap: clamp(12px, 2vmin, 16px);
                     justify-content: center;
                 }
 
                 .metric-badge {
-                    padding: clamp(12px, 2.5vw, 16px) clamp(16px, 3.5vw, 24px);
+                    padding: clamp(12px, 2vmin, 16px) clamp(16px, 2.5vmin, 24px);
                     background: #000;
                     border: 1px solid rgba(255, 255, 255, 0.1);
                     position: relative;
                     overflow: hidden;
-                    font: 600 clamp(12px, 2.5vw, 14px)/1 'Rajdhani', monospace;
+                    font: 600 clamp(12px, 1.8vmin, 14px)/1 'Rajdhani', monospace;
                     letter-spacing: 0.08em;
                     color: rgba(255, 255, 255, 0.9);
                     text-transform: uppercase;
@@ -1229,16 +1229,16 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                     }
                 }
 
-                /* STORY CONTENT - Fully responsive */
+                /* STORY CONTENT */
                 .story-content {
-                    padding: clamp(30px, 6vw, 50px) 0;
+                    padding: clamp(30px, 4vmin, 50px) 0;
                     max-width: 900px;
                     margin: 0 auto;
                 }
 
                 .story-content .section-header {
-                    margin: 0 0 clamp(35px, 7vw, 50px) 0;
-                    padding: 0 clamp(30px, 6vw, 60px) clamp(12px, 2.5vw, 16px) clamp(30px, 6vw, 60px);
+                    margin: 0 0 clamp(35px, 5vmin, 50px) 0;
+                    padding: 0 clamp(30px, 4vmin, 60px) clamp(12px, 2vmin, 16px) clamp(30px, 4vmin, 60px);
                 }
 
                 .story-content .section-header::after {
@@ -1249,18 +1249,18 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                 .story-content .section-header > div:first-child {
                     display: flex;
                     align-items: center;
-                    gap: clamp(12px, 2.5vw, 16px);
+                    gap: clamp(12px, 2vmin, 16px);
                 }
 
                 .read-time-wrapper {
                     position: absolute;
-                    right: clamp(30px, 6vw, 60px);
+                    right: clamp(30px, 4vmin, 60px);
                     top: 50%;
                     transform: translateY(-50%);
                     display: flex;
                     align-items: center;
-                    gap: clamp(4px, 1vw, 6px);
-                    font: 400 clamp(9px, 2vw, 11px)/1 'Rajdhani', monospace;
+                    gap: clamp(4px, 0.7vmin, 6px);
+                    font: 400 clamp(9px, 1.3vmin, 11px)/1 'Rajdhani', monospace;
                     letter-spacing: 0.15em;
                     text-transform: uppercase;
                     color: rgba(255, 255, 255, 0.6);
@@ -1270,8 +1270,8 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                 .read-time-wrapper svg {
                     opacity: 0.7;
                     flex-shrink: 0;
-                    width: clamp(10px, 2.2vw, 12px);
-                    height: clamp(10px, 2.2vw, 12px);
+                    width: clamp(10px, 1.5vmin, 12px);
+                    height: clamp(10px, 1.5vmin, 12px);
                 }
 
                 .story-h2,
@@ -1285,11 +1285,11 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                     margin-right: auto;
                 }
 
-                /* PREMIUM H2 MARKER - Clean SVG arrow */
+                /* PREMIUM H2 MARKER */
                 .story-h2 {
-                    font: 700 clamp(22px, 4.5vw, 34px)/1.2 'Rajdhani', monospace;
+                    font: 700 clamp(22px, 3.5vmin, 34px)/1.2 'Rajdhani', monospace;
                     color: #fff;
-                    margin: clamp(40px, 8vw, 60px) auto clamp(18px, 3.5vw, 24px) auto;
+                    margin: clamp(40px, 6vmin, 60px) auto clamp(18px, 2.5vmin, 24px) auto;
                     position: relative;
                     padding-left: 0;
                 }
@@ -1298,9 +1298,9 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                     position: absolute;
                     left: 0;
                     top: 50%;
-                    transform: translateY(-50%) translateX(calc(-100% - clamp(20px, 4vw, 28px)));
-                    width: clamp(18px, 3.5vw, 22px);
-                    height: clamp(18px, 3.5vw, 22px);
+                    transform: translateY(-50%) translateX(calc(-100% - clamp(20px, 3vmin, 28px)));
+                    width: clamp(18px, 2.5vmin, 22px);
+                    height: clamp(18px, 2.5vmin, 22px);
                     display: flex;
                     align-items: center;
                     justify-content: center;
@@ -1311,11 +1311,9 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                     height: 100%;
                     color: rgba(255, 255, 255, 0.35);
                     transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-                    /* Start pointing right */
                     transform: rotate(0deg);
                 }
 
-                /* Hover: arrow rotates to point down and brightens */
                 .story-h2:hover .h2-arrow {
                     color: rgba(255, 255, 255, 0.85);
                     transform: rotate(90deg);
@@ -1323,11 +1321,11 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                 }
 
                 .story-h3 {
-                    font: 600 clamp(17px, 3.5vw, 24px)/1.3 'Rajdhani', monospace;
+                    font: 600 clamp(17px, 2.5vmin, 24px)/1.3 'Rajdhani', monospace;
                     color: rgba(255, 255, 255, 0.9);
-                    margin: clamp(30px, 6vw, 40px) auto clamp(12px, 2.5vw, 16px) auto;
+                    margin: clamp(30px, 4vmin, 40px) auto clamp(12px, 2vmin, 16px) auto;
                     position: relative;
-                    padding-left: clamp(20px, 4vw, 24px);
+                    padding-left: clamp(20px, 3vmin, 24px);
                 }
 
                 .story-h3::before {
@@ -1338,9 +1336,9 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                 }
 
                 .story-p {
-                    font: 400 clamp(15px, 3vw, 17px)/1.7 'Rajdhani', monospace;
+                    font: 400 clamp(15px, 2vmin, 17px)/1.7 'Rajdhani', monospace;
                     color: rgba(255, 255, 255, 0.75);
-                    margin: clamp(16px, 3vw, 20px) auto;
+                    margin: clamp(16px, 2.5vmin, 20px) auto;
                 }
 
                 .story-emphasis {
@@ -1366,8 +1364,8 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                 }
 
                 .story-list {
-                    margin: clamp(12px, 2.5vw, 16px) auto;
-                    padding-left: clamp(1rem, 3vw, 1.25rem);
+                    margin: clamp(12px, 2vmin, 16px) auto;
+                    padding-left: clamp(1rem, 2.5vmin, 1.25rem);
                     list-style-position: outside;
                 }
 
@@ -1380,19 +1378,19 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                 }
 
                 .story-li {
-                    margin: clamp(4px, 1vw, 6px) 0;
+                    margin: clamp(4px, 0.7vmin, 6px) 0;
                     color: rgba(255, 255, 255, 0.75);
-                    font: 400 clamp(15px, 3vw, 17px)/1.7 'Rajdhani', monospace;
+                    font: 400 clamp(15px, 2vmin, 17px)/1.7 'Rajdhani', monospace;
                 }
 
                 .story-li > ul,
                 .story-li > ol {
-                    margin-top: clamp(6px, 1.2vw, 8px);
-                    margin-bottom: clamp(6px, 1.2vw, 8px);
+                    margin-top: clamp(6px, 1vmin, 8px);
+                    margin-bottom: clamp(6px, 1vmin, 8px);
                 }
 
                 .story-image {
-                    margin: clamp(35px, 7vw, 50px) auto;
+                    margin: clamp(35px, 5vmin, 50px) auto;
                     opacity: 0;
                     transform: translateY(30px);
                     transition: all 0.6s ease;
@@ -1412,7 +1410,7 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                 .story-image img {
                     width: 100%;
                     height: auto;
-                    max-height: clamp(300px, 60vw, 400px);
+                    max-height: clamp(300px, 45vmin, 400px);
                     object-fit: cover;
                     display: block;
                     transition: all 0.5s ease;
@@ -1430,8 +1428,8 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                 }
 
                 .story-image figcaption {
-                    padding: clamp(10px, 2vw, 12px) clamp(20px, 4vw, 30px);
-                    font: 400 clamp(10px, 2vw, 12px)/1.4 'Rajdhani', monospace;
+                    padding: clamp(10px, 1.5vmin, 12px) clamp(20px, 3vmin, 30px);
+                    font: 400 clamp(10px, 1.5vmin, 12px)/1.4 'Rajdhani', monospace;
                     color: rgba(255, 255, 255, 0.5);
                     letter-spacing: 0.06em;
                     text-transform: uppercase;
@@ -1439,8 +1437,8 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                 }
 
                 .story-quote {
-                    margin: clamp(35px, 7vw, 50px) auto;
-                    padding: clamp(24px, 5vw, 32px);
+                    margin: clamp(35px, 5vmin, 50px) auto;
+                    padding: clamp(24px, 3.5vmin, 32px);
                     position: relative;
                     background: transparent;
                     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -1448,17 +1446,17 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
 
                 .quote-mark {
                     position: absolute;
-                    top: clamp(-8px, -1.5vw, -10px);
-                    left: clamp(15px, 3vw, 20px);
-                    font-size: clamp(36px, 7vw, 48px);
+                    top: clamp(-8px, -1.2vmin, -10px);
+                    left: clamp(15px, 2.5vmin, 20px);
+                    font-size: clamp(36px, 5vmin, 48px);
                     color: rgba(255, 255, 255, 0.1);
                     font-family: Georgia, serif;
                     background: #000;
-                    padding: 0 clamp(8px, 1.5vw, 10px);
+                    padding: 0 clamp(8px, 1.2vmin, 10px);
                 }
 
                 .story-quote p {
-                    font: 500 clamp(16px, 3.5vw, 20px)/1.5 'Rajdhani', monospace;
+                    font: 500 clamp(16px, 2.5vmin, 20px)/1.5 'Rajdhani', monospace;
                     font-style: italic;
                     color: rgba(255, 255, 255, 0.8);
                     margin: 0;
@@ -1466,7 +1464,7 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                 }
 
                 .insight-section {
-                    padding: clamp(35px, 7vw, 50px) clamp(30px, 6vw, 60px);
+                    padding: clamp(35px, 5vmin, 50px) clamp(30px, 4vmin, 60px);
                     background: transparent;
                     border-top: 1px solid rgba(255, 255, 255, 0.05);
                     text-align: center;
@@ -1481,22 +1479,22 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                     top: -1px;
                     left: 50%;
                     transform: translateX(-50%);
-                    width: clamp(60px, 12vw, 80px);
+                    width: clamp(60px, 9vmin, 80px);
                     height: 1px;
                     background: rgba(255, 255, 255, 0.3);
                 }
 
                 .insight-text {
-                    font: 500 clamp(18px, 4vw, 28px)/1.5 'Rajdhani', monospace;
+                    font: 500 clamp(18px, 3vmin, 28px)/1.5 'Rajdhani', monospace;
                     color: rgba(255, 255, 255, 0.9);
                     margin: 0 auto;
                     max-width: min(600px, 90%);
                 }
 
                 #insight .section-header {
-                    padding: 0 0 clamp(12px, 2.5vw, 16px) 0;
+                    padding: 0 0 clamp(12px, 2vmin, 16px) 0;
                     max-width: 900px;
-                    margin: 0 auto clamp(35px, 7vw, 50px);
+                    margin: 0 auto clamp(35px, 5vmin, 50px);
                     position: relative;
                 }
 
@@ -1506,7 +1504,7 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                 }
 
                 .footer-section {
-                    padding: clamp(30px, 6vw, 40px) clamp(30px, 6vw, 60px);
+                    padding: clamp(30px, 4vmin, 40px) clamp(30px, 4vmin, 60px);
                     border-top: 1px solid rgba(255, 255, 255, 0.05);
                     background: rgba(0, 0, 0, 0.5);
                 }
@@ -1514,15 +1512,15 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                 .footer-tags {
                     display: flex;
                     flex-wrap: wrap;
-                    gap: clamp(10px, 2vw, 12px);
+                    gap: clamp(10px, 1.5vmin, 12px);
                     justify-content: center;
                 }
 
                 .tag {
-                    padding: clamp(5px, 1vw, 6px) clamp(10px, 2vw, 12px);
+                    padding: clamp(5px, 0.8vmin, 6px) clamp(10px, 1.5vmin, 12px);
                     background: transparent;
                     border: 1px solid rgba(255, 255, 255, 0.1);
-                    font: 400 clamp(9px, 2vw, 11px)/1 'Rajdhani', monospace;
+                    font: 400 clamp(9px, 1.3vmin, 11px)/1 'Rajdhani', monospace;
                     color: rgba(255, 255, 255, 0.5);
                     letter-spacing: 0.08em;
                     text-transform: lowercase;
@@ -1545,17 +1543,13 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
                     transform: translateY(0);
                 }
 
-                /* MOBILE BREAKPOINT - Stack stakes vertically */
-                @media (max-width: 768px) {
-                    .hero-section {
-                        aspect-ratio: 3 / 4;
-                    }
-
+                /* MOBILE - When modal gets too small, stack progress panel */
+                @media (max-width: 768px) or (max-height: 600px) {
                     .progress-system {
                         grid-template-columns: 1fr;
                         grid-template-rows: auto auto auto;
-                        padding: clamp(10px, 2vw, 12px);
-                        gap: clamp(10px, 2vw, 12px);
+                        padding: clamp(10px, 1.5vmin, 12px);
+                        gap: clamp(10px, 1.5vmin, 12px);
                         height: auto;
                     }
 
@@ -1566,7 +1560,7 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
 
                     .section-dots {
                         order: 1;
-                        gap: clamp(12px, 3vw, 20px);
+                        gap: clamp(12px, 2vmin, 20px);
                     }
 
                     .close-btn-panel {
@@ -1576,35 +1570,22 @@ export default function AchievementModal({data, isOpen, onClose}: Props) {
 
                     .stakes-container {
                         grid-template-columns: 1fr;
-                        gap: clamp(20px, 4vw, 24px);
+                        gap: clamp(20px, 3vmin, 24px);
                     }
 
                     .stakes-divider {
                         transform: rotate(90deg);
                     }
-                    
-                    .section-label {
-                        font-size: clamp(7px, 1.5vw, 9px);
-                    }
                 }
 
-                /* VERY SMALL SCREENS - Further optimize */
-                @media (max-width: 480px) {
+                /* VERY SMALL - Hide section labels */
+                @media (max-width: 480px) or (max-height: 500px) {
                     .achievement-modal-backdrop {
-                        padding: 8px;
-                    }
-
-                    .achievement-modal-container {
-                        max-width: 100%;
-                        max-height: 100%;
-                    }
-
-                    .section-dots {
-                        gap: 10px;
+                        padding: 6px;
                     }
 
                     .section-label {
-                        display: none; /* Hide labels on very small screens */
+                        display: none;
                     }
                 }
 
